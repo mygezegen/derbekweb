@@ -2,32 +2,44 @@ import { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
-function App() {
+function AppContent() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
     const checkAuth = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
-        setIsLoggedIn(!!session);
+        if (mounted) {
+          setIsLoggedIn(!!session);
+        }
       } catch (err) {
         console.error('Auth error:', err);
-        setError(err instanceof Error ? err.message : 'Bilinmeyen bir hata oluştu');
-        setIsLoggedIn(false);
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Bilinmeyen bir hata oluştu');
+          setIsLoggedIn(false);
+        }
       }
     };
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsLoggedIn(!!session);
-      setError(null);
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setIsLoggedIn(!!session);
+        setError(null);
+      }
     });
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      mounted = false;
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   if (error) {
@@ -56,6 +68,14 @@ function App() {
     <Dashboard onLogout={() => setIsLoggedIn(false)} />
   ) : (
     <Login onLoginSuccess={() => setIsLoggedIn(true)} />
+  );
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
 
