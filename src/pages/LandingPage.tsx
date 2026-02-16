@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users } from 'lucide-react';
+import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
 
 interface Announcement {
@@ -338,6 +338,27 @@ export default function LandingPage() {
           </div>
         </section>
       </div>
+
+      <a
+        href="https://wa.me/905322834038?text=Size%20www.caybasi.org%20%C3%BCzerinden%20ula%C5%9F%C4%B1yorum"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 z-50 group"
+        aria-label="WhatsApp ile iletişime geç"
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-green-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300 animate-pulse"></div>
+          <div className="relative bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-full shadow-2xl hover:shadow-green-500/50 hover:scale-110 transform transition-all duration-300">
+            <MessageCircle className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block">
+          <div className="bg-gray-900 text-white text-sm py-2 px-4 rounded-lg shadow-xl whitespace-nowrap">
+            WhatsApp ile iletişime geç
+            <div className="absolute top-full right-6 w-0 h-0 border-l-8 border-r-8 border-t-8 border-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      </a>
 
       <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-8">
         <div className="container mx-auto px-4 text-center">
