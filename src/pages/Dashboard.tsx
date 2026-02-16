@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -30,6 +30,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [pageSettings, setPageSettings] = useState<PageSetting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -185,30 +186,53 @@ export function Dashboard({ onLogout }: DashboardProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="bg-gradient-to-r from-red-600 to-red-700 shadow-lg sticky top-0 z-50 border-b-4 border-green-600">
-        <div className="px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/sdas.jpeg" alt="Dernek Logo" className="h-14 w-14 object-contain rounded-full bg-white p-1 shadow-md" />
-            <h1 className="text-lg font-bold text-white drop-shadow-md">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</h1>
+        <div className="px-4 py-3 md:py-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden text-white p-2 hover:bg-red-800 rounded-lg transition-colors flex-shrink-0"
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+            <img src="/sdas.jpeg" alt="Dernek Logo" className="h-10 w-10 md:h-14 md:w-14 object-contain rounded-full bg-white p-1 shadow-md flex-shrink-0" />
+            <h1 className="text-sm md:text-base lg:text-lg font-bold text-white drop-shadow-md truncate">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</h1>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 bg-white text-red-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium shadow-md"
+            className="flex items-center gap-2 bg-white text-red-600 px-3 md:px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors font-medium shadow-md text-sm md:text-base flex-shrink-0"
           >
-            <LogOut size={20} />
-            Çıkış
+            <LogOut size={18} className="md:hidden" />
+            <LogOut size={20} className="hidden md:block" />
+            <span className="hidden sm:inline">Çıkış</span>
           </button>
         </div>
       </nav>
 
-      <div className="flex flex-1">
-        <aside className="w-64 bg-gradient-to-b from-red-700 to-red-800 shadow-lg overflow-y-auto">
+      <div className="flex flex-1 relative">
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        <aside className={`
+          fixed lg:static inset-y-0 left-0 z-40
+          w-64 bg-gradient-to-b from-red-700 to-red-800 shadow-lg overflow-y-auto
+          transform transition-transform duration-300 ease-in-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          mt-[73px] md:mt-[81px] lg:mt-0
+        `}>
           <div className="p-4 space-y-1">
             {tabs.map((tab) => {
               const Icon = tab.icon as any;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => {
+                    setActiveTab(tab.id as any);
+                    setSidebarOpen(false);
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
                     activeTab === tab.id
                       ? 'bg-green-600 text-white shadow-md'
@@ -223,87 +247,87 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 py-8">
+        <main className="flex-1 overflow-y-auto w-full">
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-8">
         {activeTab === 'home' && (
-          <div className="space-y-8">
-            <div className="bg-white rounded-lg shadow p-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+          <div className="space-y-6 md:space-y-8">
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 md:mb-4">
                 Hoş geldiniz, {currentMember?.full_name}!
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 md:mb-6">
                 Köy dernekte size katkı sunmak için buradayız. Duyuruları takip edin, etkinliklere katılın ve
                 topluluk üyeleriyle bağlantı kurun.
               </p>
 
               {currentMember?.is_admin && stats ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg border border-amber-500/20">
-                    <div className="text-3xl font-bold text-amber-500 mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 md:p-6 rounded-lg border border-amber-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-amber-500 mb-2">
                       {stats.totalMembers}
                     </div>
-                    <p className="text-gray-200 font-medium">Toplam Üye</p>
-                    <p className="text-sm text-gray-400 mt-1">{stats.membersInDebt} borçlu üye</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Toplam Üye</p>
+                    <p className="text-xs md:text-sm text-gray-400 mt-1">{stats.membersInDebt} borçlu üye</p>
                   </div>
-                  <div className="bg-gradient-to-br from-red-900 to-red-800 p-6 rounded-lg border border-red-500/20">
-                    <div className="text-3xl font-bold text-red-300 mb-2">
+                  <div className="bg-gradient-to-br from-red-900 to-red-800 p-4 md:p-6 rounded-lg border border-red-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-red-300 mb-2">
                       ₺{stats.totalDebtAmount.toFixed(2)}
                     </div>
-                    <p className="text-gray-200 font-medium">Toplam Borç</p>
-                    <p className="text-sm text-gray-300 mt-1">{stats.membersInDebt} kişiden</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Toplam Borç</p>
+                    <p className="text-xs md:text-sm text-gray-300 mt-1">{stats.membersInDebt} kişiden</p>
                   </div>
-                  <div className="bg-gradient-to-br from-green-900 to-green-800 p-6 rounded-lg border border-green-500/20">
-                    <div className="text-3xl font-bold text-green-300 mb-2">
+                  <div className="bg-gradient-to-br from-green-900 to-green-800 p-4 md:p-6 rounded-lg border border-green-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-green-300 mb-2">
                       {stats.paidThisMonth}
                     </div>
-                    <p className="text-gray-200 font-medium">Bu Ay Ödenen</p>
-                    <p className="text-sm text-gray-300 mt-1">aidat ödemesi</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Bu Ay Ödenen</p>
+                    <p className="text-xs md:text-sm text-gray-300 mt-1">aidat ödemesi</p>
                   </div>
-                  <div className="bg-gradient-to-br from-amber-900 to-amber-800 p-6 rounded-lg border border-amber-500/20">
-                    <div className="text-3xl font-bold text-amber-300 mb-2">
+                  <div className="bg-gradient-to-br from-amber-900 to-amber-800 p-4 md:p-6 rounded-lg border border-amber-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-amber-300 mb-2">
                       {stats.upcomingEvents}
                     </div>
-                    <p className="text-gray-200 font-medium">Yaklaşan Etkinlik</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Yaklaşan Etkinlik</p>
                   </div>
-                  <div className="bg-gradient-to-br from-gray-800 to-gray-700 p-6 rounded-lg border border-amber-500/20">
-                    <div className="text-3xl font-bold text-amber-400 mb-2">
+                  <div className="bg-gradient-to-br from-gray-800 to-gray-700 p-4 md:p-6 rounded-lg border border-amber-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-amber-400 mb-2">
                       {stats.recentAnnouncements}
                     </div>
-                    <p className="text-gray-200 font-medium">Aktif Duyuru</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Aktif Duyuru</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-lg border border-amber-500/20">
-                    <div className="text-3xl font-bold text-amber-500 mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                  <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 md:p-6 rounded-lg border border-amber-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-amber-500 mb-2">
                       {announcements.length}
                     </div>
-                    <p className="text-gray-200 font-medium">Aktif Duyuru</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Aktif Duyuru</p>
                   </div>
-                  <div className="bg-gradient-to-br from-amber-900 to-amber-800 p-6 rounded-lg border border-amber-500/20">
-                    <div className="text-3xl font-bold text-amber-300 mb-2">
+                  <div className="bg-gradient-to-br from-amber-900 to-amber-800 p-4 md:p-6 rounded-lg border border-amber-500/20">
+                    <div className="text-2xl md:text-3xl font-bold text-amber-300 mb-2">
                       {events.filter(e => new Date(e.event_date) > new Date()).length}
                     </div>
-                    <p className="text-gray-200 font-medium">Yaklaşan Etkinlik</p>
+                    <p className="text-sm md:text-base text-gray-200 font-medium">Yaklaşan Etkinlik</p>
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow p-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Son Duyurular</h3>
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Son Duyurular</h3>
               {announcements.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {announcements.slice(0, 3).map((announcement) => (
-                    <div key={announcement.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                    <div key={announcement.id} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+                      <h4 className="text-base sm:text-lg font-semibold text-gray-800 mb-2">
                         {announcement.title}
                       </h4>
                       <div
-                        className="text-gray-600 mb-3 announcement-content"
+                        className="text-sm sm:text-base text-gray-600 mb-3 announcement-content"
                         dangerouslySetInnerHTML={{ __html: announcement.content }}
                       />
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-500">
                         <span>
                           {new Date(announcement.created_at).toLocaleDateString('tr-TR', {
                             day: 'numeric',
@@ -328,26 +352,26 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   ))}
                   <button
                     onClick={() => setActiveTab('announcements')}
-                    className="w-full text-center py-2 text-blue-600 hover:text-blue-800 font-medium"
+                    className="w-full text-center py-2 text-blue-600 hover:text-blue-800 font-medium text-sm sm:text-base"
                   >
                     Tüm Duyuruları Gör →
                   </button>
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">Henüz duyuru bulunmamaktadır.</p>
+                <p className="text-sm sm:text-base text-gray-500 text-center py-4">Henüz duyuru bulunmamaktadır.</p>
               )}
             </div>
 
-            <div className="bg-white rounded-lg shadow p-8">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Yaklaşan Etkinlikler</h3>
+            <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Yaklaşan Etkinlikler</h3>
               {events.filter(e => new Date(e.event_date) > new Date()).length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {events.filter(e => new Date(e.event_date) > new Date()).slice(0, 3).map((event) => (
-                    <div key={event.id} className="border-l-4 border-emerald-500 bg-emerald-50 p-4 rounded-r-lg">
+                    <div key={event.id} className="border-l-4 border-emerald-500 bg-emerald-50 p-3 sm:p-4 rounded-r-lg">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-800 mb-2">{event.title}</h4>
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-800 mb-2">{event.title}</h4>
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Calendar size={16} />
                               {new Date(event.event_date).toLocaleDateString('tr-TR', {
@@ -370,7 +394,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">Henüz yaklaşan etkinlik bulunmamaktadır.</p>
+                <p className="text-sm sm:text-base text-gray-500 text-center py-4">Henüz yaklaşan etkinlik bulunmamaktadır.</p>
               )}
             </div>
           </div>

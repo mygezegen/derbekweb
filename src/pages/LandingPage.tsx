@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle } from 'lucide-react';
+import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle, Youtube, Instagram, Facebook } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
 
 interface Announcement {
@@ -40,9 +40,9 @@ interface ContactInfo {
   address: string;
   phone: string;
   email: string;
-  social_media: {
+  social_media?: {
     facebook?: string;
-    twitter?: string;
+    youtube?: string;
     instagram?: string;
   };
 }
@@ -316,6 +316,47 @@ export default function LandingPage() {
                       <p className="text-gray-600">{contactInfo?.email || 'info@caybasi.org'}</p>
                     </div>
                   </div>
+
+                  {contactInfo?.social_media && (contactInfo.social_media.youtube || contactInfo.social_media.instagram || contactInfo.social_media.facebook) && (
+                    <div className="pt-6 border-t border-gray-200">
+                      <h4 className="font-semibold text-gray-800 mb-4">Sosyal Medya</h4>
+                      <div className="flex items-center gap-4">
+                        {contactInfo.social_media.youtube && (
+                          <a
+                            href={contactInfo.social_media.youtube}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-red-100 p-3 rounded-lg hover:bg-red-200 transition-colors group"
+                            title="YouTube"
+                          >
+                            <Youtube className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                        {contactInfo.social_media.instagram && (
+                          <a
+                            href={contactInfo.social_media.instagram}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-pink-100 p-3 rounded-lg hover:bg-pink-200 transition-colors group"
+                            title="Instagram"
+                          >
+                            <Instagram className="w-6 h-6 text-pink-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                        {contactInfo.social_media.facebook && (
+                          <a
+                            href={contactInfo.social_media.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-100 p-3 rounded-lg hover:bg-blue-200 transition-colors group"
+                            title="Facebook"
+                          >
+                            <Facebook className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="bg-gradient-to-br from-emerald-50 to-amber-50 rounded-lg p-8 flex flex-col justify-center items-center text-center">

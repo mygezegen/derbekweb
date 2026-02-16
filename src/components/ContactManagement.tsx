@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { ContactInfo, ManagementInfo, Member } from '../types';
-import { Phone, Mail, MapPin, Edit2, Save, X, Users as UsersIcon, Plus, Trash2 } from 'lucide-react';
+import { Phone, Mail, MapPin, Edit2, Save, X, Users as UsersIcon, Plus, Trash2, Youtube, Instagram, Facebook } from 'lucide-react';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
 
@@ -247,6 +247,67 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+
+            <div className="border-t pt-4 mt-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Sosyal Medya Hesapları</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    YouTube
+                  </label>
+                  <input
+                    type="url"
+                    value={editedContact.social_media?.youtube || ''}
+                    onChange={(e) => setEditedContact({
+                      ...editedContact,
+                      social_media: {
+                        ...editedContact.social_media,
+                        youtube: e.target.value
+                      }
+                    })}
+                    placeholder="https://youtube.com/@kanaliniz"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Instagram
+                  </label>
+                  <input
+                    type="url"
+                    value={editedContact.social_media?.instagram || ''}
+                    onChange={(e) => setEditedContact({
+                      ...editedContact,
+                      social_media: {
+                        ...editedContact.social_media,
+                        instagram: e.target.value
+                      }
+                    })}
+                    placeholder="https://instagram.com/hesabiniz"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Facebook
+                  </label>
+                  <input
+                    type="url"
+                    value={editedContact.social_media?.facebook || ''}
+                    onChange={(e) => setEditedContact({
+                      ...editedContact,
+                      social_media: {
+                        ...editedContact.social_media,
+                        facebook: e.target.value
+                      }
+                    })}
+                    placeholder="https://facebook.com/sayfaniz"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
@@ -285,6 +346,44 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
               <div className="flex items-start gap-3 text-gray-700">
                 <MapPin size={20} className="text-blue-600 mt-1" />
                 <span>{contactInfo.address}</span>
+              </div>
+            )}
+
+            {(contactInfo?.social_media?.youtube || contactInfo?.social_media?.instagram || contactInfo?.social_media?.facebook) && (
+              <div className="flex items-center gap-4 pt-4 border-t mt-4">
+                {contactInfo.social_media.youtube && (
+                  <a
+                    href={contactInfo.social_media.youtube}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                    title="YouTube"
+                  >
+                    <Youtube size={28} />
+                  </a>
+                )}
+                {contactInfo.social_media.instagram && (
+                  <a
+                    href={contactInfo.social_media.instagram}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                    title="Instagram"
+                  >
+                    <Instagram size={28} />
+                  </a>
+                )}
+                {contactInfo.social_media.facebook && (
+                  <a
+                    href={contactInfo.social_media.facebook}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                    title="Facebook"
+                  >
+                    <Facebook size={28} />
+                  </a>
+                )}
               </div>
             )}
           </div>

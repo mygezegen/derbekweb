@@ -240,41 +240,43 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="border-b border-gray-200">
-          <div className="flex gap-2 px-6">
+          <div className="flex gap-1 sm:gap-2 px-3 sm:px-6 overflow-x-auto">
             <button
               onClick={() => setActiveTab('members')}
-              className={`flex items-center gap-2 px-4 py-4 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                 activeTab === 'members'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              <Users size={20} />
-              Üye Yönetimi
+              <Users size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Üye Yönetimi</span>
+              <span className="sm:hidden">Üyeler</span>
             </button>
             <button
               onClick={() => setActiveTab('payments')}
-              className={`flex items-center gap-2 px-4 py-4 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                 activeTab === 'payments'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              <DollarSign size={20} />
-              Aidat Ödemeleri
+              <DollarSign size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Aidat Ödemeleri</span>
+              <span className="sm:hidden">Ödeme</span>
             </button>
             <button
               onClick={() => setActiveTab('notifications')}
-              className={`flex items-center gap-2 px-4 py-4 font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
                 activeTab === 'notifications'
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              <Mail size={20} />
+              <Mail size={18} className="sm:w-5 sm:h-5" />
               Bildirimler
             </button>
           </div>
@@ -282,33 +284,33 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
       </div>
 
       {activeTab === 'members' && (
-        <div className="bg-white rounded-lg shadow p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Üye Yönetimi</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Üye Yönetimi</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="text-3xl font-bold text-blue-600 mb-2">{members.length}</div>
-            <p className="text-gray-600">Toplam Üye</p>
+            <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">{members.length}</div>
+            <p className="text-sm sm:text-base text-gray-600">Toplam Üye</p>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="text-3xl font-bold text-purple-600 mb-2">{adminCount}</div>
-            <p className="text-gray-600">Yönetici</p>
+            <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-2">{adminCount}</div>
+            <p className="text-sm sm:text-base text-gray-600">Yönetici</p>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
           <button
             onClick={() => setShowAddMember(!showAddMember)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
           >
-            <UserPlus size={20} />
+            <UserPlus size={18} className="sm:w-5 sm:h-5" />
             Üye Ekle
           </button>
           <button
             onClick={handleExportMembers}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
           >
-            <Download size={20} />
+            <Download size={18} className="sm:w-5 sm:h-5" />
             Excel'e Aktar
           </button>
         </div>
@@ -386,47 +388,47 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
           </form>
         )}
 
-        <div className="bg-white rounded-lg shadow p-8 mt-8">
-          <h3 className="text-xl font-bold text-gray-800 mb-6">Üye Listesi</h3>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8 mt-6 md:mt-8">
+          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4 md:mb-6">Üye Listesi</h3>
 
-          <div className="space-y-2">
+          <div className="space-y-2 md:space-y-3">
             {members.map((member) => (
               <div
                 key={member.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-800">{member.full_name}</h4>
-                  <p className="text-sm text-gray-600">{member.email}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{member.full_name}</h4>
+                  <p className="text-xs sm:text-sm text-gray-600 truncate">{member.email}</p>
                   {member.is_admin && (
-                    <span className="inline-block mt-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded flex items-center gap-1 w-fit">
-                      <Shield size={14} />
+                    <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                      <Shield size={12} />
                       Yönetici
                     </span>
                   )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {member.is_admin ? (
                     <button
                       onClick={() => handleRemoveAdmin(member.id)}
-                      className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded text-sm hover:bg-yellow-200 transition-colors"
+                      className="bg-yellow-100 text-yellow-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm hover:bg-yellow-200 transition-colors whitespace-nowrap"
                     >
                       Yöneticiyi Kaldır
                     </button>
                   ) : (
                     <button
                       onClick={() => handleMakeAdmin(member.id)}
-                      className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200 transition-colors"
+                      className="bg-blue-100 text-blue-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm hover:bg-blue-200 transition-colors whitespace-nowrap"
                     >
                       Yönetici Yap
                     </button>
                   )}
                   <button
                     onClick={() => handleDeleteMember(member.id)}
-                    className="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200 transition-colors"
+                    className="bg-red-100 text-red-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded hover:bg-red-200 transition-colors"
                   >
-                    <Trash2 size={18} />
+                    <Trash2 size={16} className="sm:w-[18px] sm:h-[18px]" />
                   </button>
                 </div>
               </div>
@@ -441,24 +443,24 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
       )}
 
       {activeTab === 'notifications' && (
-        <div className="bg-white rounded-lg shadow p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Bildirim Gönder</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Bildirim Gönder</h2>
 
           {success && (
-            <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-4 py-3 rounded mb-6">
+            <div className="bg-green-50 border-l-4 border-green-500 text-green-700 px-3 sm:px-4 py-3 rounded mb-4 md:mb-6 text-sm sm:text-base">
               {success}
             </div>
           )}
 
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-3 sm:px-4 py-3 rounded mb-4 md:mb-6 text-sm sm:text-base">
               {error}
             </div>
           )}
 
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mb-6">
-            <h4 className="font-semibold text-blue-800 mb-2">Bilgi</h4>
-            <p className="text-sm text-blue-700">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded mb-4 md:mb-6">
+            <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Bilgi</h4>
+            <p className="text-xs sm:text-sm text-blue-700">
               Bu sayfadan üyelerinize toplu e-posta veya SMS bildirimi gönderebilirsiniz.
               Bildirimler veritabanına kaydedilir ancak gerçek gönderim için SMS ve e-posta servis entegrasyonları gereklidir.
             </p>
@@ -555,24 +557,24 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
             </div>
           </form>
 
-          <div className="mt-8 pt-8 border-t border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Alıcı Özeti</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm text-blue-700 mb-1">Toplam Üye</p>
-                <p className="text-2xl font-bold text-blue-800">{members.length}</p>
+          <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 md:mb-4">Alıcı Özeti</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+              <div className="bg-blue-50 rounded-lg p-3 md:p-4">
+                <p className="text-xs sm:text-sm text-blue-700 mb-1">Toplam Üye</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-800">{members.length}</p>
               </div>
-              <div className="bg-red-50 rounded-lg p-4">
-                <p className="text-sm text-red-700 mb-1">Borçlu Üye</p>
-                <p className="text-2xl font-bold text-red-800">
+              <div className="bg-red-50 rounded-lg p-3 md:p-4">
+                <p className="text-xs sm:text-sm text-red-700 mb-1">Borçlu Üye</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-800">
                   {members.filter(m => {
                     return true;
                   }).length}
                 </p>
               </div>
-              <div className="bg-green-50 rounded-lg p-4">
-                <p className="text-sm text-green-700 mb-1">Seçili Alıcı</p>
-                <p className="text-2xl font-bold text-green-800">
+              <div className="bg-green-50 rounded-lg p-3 md:p-4">
+                <p className="text-xs sm:text-sm text-green-700 mb-1">Seçili Alıcı</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-800">
                   {recipientType === 'all' ? members.length : recipientType === 'debtors' ? '...' : '0'}
                 </p>
               </div>
