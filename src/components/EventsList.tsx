@@ -4,6 +4,7 @@ import { Event, EventParticipant } from '../types';
 import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
+import { HTMLEditor } from './HTMLEditor';
 
 interface EventsListProps {
   events: Event[];
@@ -320,12 +321,10 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Açıklama
             </label>
-            <textarea
+            <HTMLEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Etkinlik açıklaması"
+              onChange={setDescription}
+              placeholder="Etkinlik açıklaması yazın..."
             />
           </div>
           <div className="flex gap-2">
@@ -398,7 +397,10 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                         </div>
                       </div>
                       {event.description && (
-                        <p className="text-gray-600 mb-3">{event.description}</p>
+                        <div
+                          className="text-gray-600 mb-3 announcement-content"
+                          dangerouslySetInnerHTML={{ __html: event.description }}
+                        />
                       )}
                       <div className="flex gap-2">
                         <button
@@ -465,7 +467,10 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                       )}
                     </div>
                     {event.description && (
-                      <p className="text-gray-600">{event.description}</p>
+                      <div
+                        className="text-gray-600 announcement-content"
+                        dangerouslySetInnerHTML={{ __html: event.description }}
+                      />
                     )}
                   </div>
                   {isAdmin && (

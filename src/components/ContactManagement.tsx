@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { ContactInfo, ManagementInfo, Member } from '../types';
 import { Phone, Mail, MapPin, Edit2, Save, X, Users as UsersIcon, Plus, Trash2 } from 'lucide-react';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
+import { HTMLEditor } from './HTMLEditor';
 
 interface ContactManagementProps {
   isAdmin: boolean;
@@ -354,12 +355,10 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Biyografi (Opsiyonel)
               </label>
-              <textarea
+              <HTMLEditor
                 value={managementFormData.bio}
-                onChange={(e) => setManagementFormData({ ...managementFormData, bio: e.target.value })}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Kısa açıklama"
+                onChange={(bio) => setManagementFormData({ ...managementFormData, bio })}
+                placeholder="Kısa açıklama yazın..."
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -433,7 +432,10 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
                   </h3>
                   <p className="text-blue-600 font-medium mb-2">{member.position}</p>
                   {member.bio && (
-                    <p className="text-sm text-gray-600">{member.bio}</p>
+                    <div
+                      className="text-sm text-gray-600 announcement-content"
+                      dangerouslySetInnerHTML={{ __html: member.bio }}
+                    />
                   )}
                   {isAdmin && (
                     <div className="flex gap-2 mt-4">

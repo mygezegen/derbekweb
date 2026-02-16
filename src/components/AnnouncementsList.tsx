@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Announcement } from '../types';
 import { Trash2, Plus, Clock } from 'lucide-react';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
+import { HTMLEditor } from './HTMLEditor';
 
 interface AnnouncementsListProps {
   announcements: Announcement[];
@@ -143,13 +144,11 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
             <label className="block text-sm font-medium text-gray-700 mb-2">
               İçerik
             </label>
-            <textarea
+            <HTMLEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={setContent}
+              placeholder="Duyuru içeriği yazın..."
               required
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Duyuru içeriği"
             />
           </div>
           <div className="mb-4">
@@ -202,7 +201,10 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">
                       {announcement.title}
                     </h3>
-                    <p className="text-gray-600 mb-3 whitespace-pre-wrap">{announcement.content}</p>
+                    <div
+                      className="text-gray-600 mb-3 announcement-content"
+                      dangerouslySetInnerHTML={{ __html: announcement.content }}
+                    />
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span>
                         Yayınlandı: {new Date(announcement.created_at).toLocaleDateString('tr-TR', {
@@ -251,7 +253,10 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">
                       {announcement.title}
                     </h3>
-                    <p className="text-gray-600 mb-3 whitespace-pre-wrap">{announcement.content}</p>
+                    <div
+                      className="text-gray-600 mb-3 announcement-content"
+                      dangerouslySetInnerHTML={{ __html: announcement.content }}
+                    />
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span>
                         Yayınlandı: {new Date(announcement.created_at).toLocaleDateString('tr-TR', {

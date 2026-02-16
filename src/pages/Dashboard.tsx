@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -12,14 +13,18 @@ import { GalleryManagement } from '../components/GalleryManagement';
 import { BulkOperations } from '../components/BulkOperations';
 import { ContactManagement } from '../components/ContactManagement';
 import { PageSettings } from '../components/PageSettings';
+import { SMTPConfiguration } from '../components/SMTPConfiguration';
+import { BoardManagement } from '../components/BoardManagement';
+import { EmailTemplates } from '../components/EmailTemplates';
 
 interface DashboardProps {
   onLogout: () => void;
 }
 
 export function Dashboard({ onLogout }: DashboardProps) {
+  const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'gallery' | 'contact' | 'bulk' | 'admin' | 'settings'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'gallery' | 'contact' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'board' | 'email-templates'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -128,6 +133,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     onLogout();
+    navigate('/');
   };
 
   if (loading) {
@@ -164,19 +170,22 @@ export function Dashboard({ onLogout }: DashboardProps) {
     ...(currentMember?.is_admin ? [
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
+      { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
+      { id: 'smtp', label: 'E-posta Ayarları', icon: Mail, pageKey: 'smtp' },
+      { id: 'email-templates', label: 'E-posta Şablonları', icon: FileText, pageKey: 'email-templates' },
       { id: 'settings', label: 'Sayfa Ayarları', icon: Sliders, pageKey: 'settings' }
     ] : []),
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'board' || tab.pageKey === 'email-templates') return true;
     return isPageVisible(tab.pageKey);
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="bg-gradient-to-r from-red-600 to-red-700 shadow-lg sticky top-0 z-50 border-b-4 border-green-600">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/sdas.jpeg" alt="Dernek Logo" className="h-14 w-14 object-contain rounded-full bg-white p-1 shadow-md" />
             <h1 className="text-lg font-bold text-white drop-shadow-md">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</h1>
@@ -189,31 +198,33 @@ export function Dashboard({ onLogout }: DashboardProps) {
             Çıkış
           </button>
         </div>
+      </nav>
 
-        <div className="bg-red-700 overflow-x-auto border-t border-red-800">
-          <div className="max-w-6xl mx-auto px-4 flex gap-2">
+      <div className="flex flex-1">
+        <aside className="w-64 bg-gradient-to-b from-red-700 to-red-800 shadow-lg overflow-y-auto">
+          <div className="p-4 space-y-1">
             {tabs.map((tab) => {
               const Icon = tab.icon as any;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'text-white border-b-3 border-green-500'
-                      : 'text-red-100 hover:text-white'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'text-red-100 hover:bg-red-600 hover:text-white'
                   }`}
                 >
                   <Icon size={20} />
-                  {tab.label}
+                  <span className="text-sm">{tab.label}</span>
                 </button>
               );
             })}
           </div>
-        </div>
-      </nav>
+        </aside>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto px-4 py-8">
         {activeTab === 'home' && (
           <div className="space-y-8">
             <div className="bg-white rounded-lg shadow p-8">
@@ -281,11 +292,86 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
             <div className="bg-white rounded-lg shadow p-8">
               <h3 className="text-xl font-bold text-gray-800 mb-4">Son Duyurular</h3>
-              <AnnouncementsList
-                announcements={announcements.slice(0, 3)}
-                isAdmin={currentMember?.is_admin || false}
-                onRefresh={loadData}
-              />
+              {announcements.length > 0 ? (
+                <div className="space-y-4">
+                  {announcements.slice(0, 3).map((announcement) => (
+                    <div key={announcement.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
+                        {announcement.title}
+                      </h4>
+                      <div
+                        className="text-gray-600 mb-3 announcement-content"
+                        dangerouslySetInnerHTML={{ __html: announcement.content }}
+                      />
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span>
+                          {new Date(announcement.created_at).toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                        {announcement.expires_at && (
+                          <span className="flex items-center gap-1 text-amber-600">
+                            <Bell size={14} />
+                            Bitiş: {new Date(announcement.expires_at).toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setActiveTab('announcements')}
+                    className="w-full text-center py-2 text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Tüm Duyuruları Gör →
+                  </button>
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Henüz duyuru bulunmamaktadır.</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-8">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Yaklaşan Etkinlikler</h3>
+              {events.filter(e => new Date(e.event_date) > new Date()).length > 0 ? (
+                <div className="space-y-4">
+                  {events.filter(e => new Date(e.event_date) > new Date()).slice(0, 3).map((event) => (
+                    <div key={event.id} className="border-l-4 border-emerald-500 bg-emerald-50 p-4 rounded-r-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-800 mb-2">{event.title}</h4>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <span className="flex items-center gap-1">
+                              <Calendar size={16} />
+                              {new Date(event.event_date).toLocaleDateString('tr-TR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                            {event.location && (
+                              <span className="flex items-center gap-1">
+                                📍 {event.location}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">Henüz yaklaşan etkinlik bulunmamaktadır.</p>
+              )}
             </div>
           </div>
         )}
@@ -345,6 +431,20 @@ export function Dashboard({ onLogout }: DashboardProps) {
         {activeTab === 'settings' && currentMember?.is_admin && (
           <PageSettings />
         )}
+
+        {activeTab === 'smtp' && currentMember?.is_admin && (
+          <SMTPConfiguration />
+        )}
+
+        {activeTab === 'board' && currentMember?.is_admin && (
+          <BoardManagement />
+        )}
+
+        {activeTab === 'email-templates' && currentMember?.is_admin && (
+          <EmailTemplates />
+        )}
+          </div>
+        </main>
       </div>
     </div>
   );

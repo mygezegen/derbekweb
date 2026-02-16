@@ -85,30 +85,19 @@ export function CalendarView({
     days.push(
       <div
         key={day}
-        className={`h-24 border border-gray-200 p-2 cursor-pointer hover:bg-gray-50 transition-colors ${
+        className={`h-24 border border-gray-200 p-2 cursor-pointer hover:bg-emerald-50 transition-colors ${
           isToday ? 'bg-blue-50 border-blue-300' : ''
-        }`}
-        onClick={() => setSelectedDate(date)}
+        } ${dayEvents.length > 0 ? 'bg-green-50' : ''}`}
+        onClick={() => dayEvents.length > 0 && setSelectedDate(date)}
       >
         <div className={`text-sm font-semibold mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
           {day}
         </div>
         {dayEvents.length > 0 && (
-          <div className="space-y-1">
-            {dayEvents.slice(0, 2).map(event => (
-              <div
-                key={event.id}
-                className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded truncate"
-                title={event.title}
-              >
-                {formatEventTime(event.event_date)} - {event.title}
-              </div>
-            ))}
-            {dayEvents.length > 2 && (
-              <div className="text-xs text-gray-600 px-2">
-                +{dayEvents.length - 2} daha
-              </div>
-            )}
+          <div className="flex items-center justify-center">
+            <div className="bg-emerald-600 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+              {dayEvents.length}
+            </div>
           </div>
         )}
       </div>
