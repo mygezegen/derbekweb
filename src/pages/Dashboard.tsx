@@ -77,7 +77,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         .order('event_date', { ascending: true });
       setEvents(eventsData || []);
 
-      if (memberData?.is_admin) {
+      if (memberData?.is_admin || memberData?.is_root) {
         await loadAdminStats();
       }
     } catch (error) {
@@ -153,7 +153,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
     const setting = getPageSetting(pageKey);
     if (!setting || !setting.is_enabled) return false;
 
-    if (currentMember?.is_admin) {
+    if (currentMember?.is_root || currentMember?.is_admin) {
       return setting.visible_to_admin;
     } else {
       return setting.visible_to_members;
@@ -162,13 +162,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   const allTabs = [
     { id: 'home', label: 'Ana Sayfa', icon: Home, pageKey: 'home' },
-    { id: 'members', label: currentMember?.is_admin ? 'Üyeler' : 'Üye Bilgileri', icon: Users, pageKey: 'members' },
+    { id: 'members', label: (currentMember?.is_admin || currentMember?.is_root) ? 'Üyeler' : 'Üye Bilgileri', icon: Users, pageKey: 'members' },
+    { id: 'contact', label: 'İletişim', icon: Phone, pageKey: 'contact' },
     { id: 'announcements', label: 'Duyurular', icon: Bell, pageKey: 'announcements' },
     { id: 'events', label: 'Etkinlikler', icon: Calendar, pageKey: 'events' },
     { id: 'dues', label: 'Aidatlar', icon: DollarSign, pageKey: 'dues' },
     { id: 'gallery', label: 'Galeri', icon: Image, pageKey: 'gallery' },
-    { id: 'contact', label: 'İletişim', icon: Phone, pageKey: 'contact' },
-    ...(currentMember?.is_admin ? [
+    ...((currentMember?.is_admin || currentMember?.is_root) ? [
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
       { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
@@ -194,8 +194,16 @@ export function Dashboard({ onLogout }: DashboardProps) {
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <img src="/sdas.jpeg" alt="Dernek Logo" className="h-10 w-10 md:h-14 md:w-14 object-contain rounded-full bg-white p-1 shadow-md flex-shrink-0" />
-            <h1 className="text-sm md:text-base lg:text-lg font-bold text-white drop-shadow-md truncate">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</h1>
+            <button
+              onClick={() => {
+                setActiveTab('home');
+                setSidebarOpen(false);
+              }}
+              className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity"
+            >
+              <img src="/sdas.jpeg" alt="Dernek Logo" className="h-10 w-10 md:h-14 md:w-14 object-contain rounded-full bg-white p-1 shadow-md flex-shrink-0" />
+              <h1 className="text-sm md:text-base lg:text-lg font-bold text-white drop-shadow-md truncate text-left">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</h1>
+            </button>
           </div>
           <button
             onClick={handleLogout}
@@ -260,7 +268,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 topluluk üyeleriyle bağlantı kurun.
               </p>
 
-              {currentMember?.is_admin && stats ? (
+              {(currentMember?.is_admin || currentMember?.is_root) && stats ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                   <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 md:p-6 rounded-lg border border-amber-500/20">
                     <div className="text-2xl md:text-3xl font-bold text-amber-500 mb-2">
@@ -401,7 +409,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         )}
 
         {activeTab === 'members' && (
-          currentMember?.is_admin ? (
+          (currentMember?.is_admin || currentMember?.is_root) ? (
             <MemberDirectory />
           ) : (
             <MemberInfo />
@@ -411,7 +419,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         {activeTab === 'announcements' && (
           <AnnouncementsList
             announcements={announcements}
-            isAdmin={currentMember?.is_admin || false}
+            isAdmin={currentMember?.is_admin || currentMember?.is_root || false}
             onRefresh={loadData}
           />
         )}
@@ -419,7 +427,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         {activeTab === 'events' && (
           <EventsList
             events={events}
-            isAdmin={currentMember?.is_admin || false}
+            isAdmin={currentMember?.is_admin || currentMember?.is_root || false}
             onRefresh={loadData}
           />
         )}

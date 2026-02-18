@@ -5,10 +5,14 @@ import { Gift, Plus, Calendar, DollarSign, FileText, Search } from 'lucide-react
 
 interface Donation {
   id: string;
-  member_id: string;
+  member_id: string | null;
+  donor_name: string | null;
+  donor_email: string | null;
+  donor_phone: string | null;
   amount: number;
   donation_date: string;
   description: string | null;
+  purpose: string | null;
   payment_method: string | null;
   created_at: string;
   members?: {
@@ -33,10 +37,15 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({
     member_id: '',
+    donor_name: '',
+    donor_email: '',
+    donor_phone: '',
     amount: '',
     donation_date: new Date().toISOString().split('T')[0],
     description: '',
-    payment_method: 'cash'
+    purpose: '',
+    payment_method: 'cash',
+    is_member: 'true'
   });
 
   useEffect(() => {
@@ -109,14 +118,28 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
     setSaving(true);
 
     try {
-      const donationPayload = {
-        member_id: formData.member_id,
+      const isMember = formData.is_member === 'true';
+
+      const donationPayload: any = {
         amount: parseFloat(formData.amount),
         donation_date: formData.donation_date,
         description: formData.description || null,
+        purpose: formData.purpose || null,
         payment_method: formData.payment_method,
-        created_by: currentMember.id
+        created_by: isAdmin ? currentMember.id : null
       };
+
+      if (isMember) {
+        donationPayload.member_id = formData.member_id;
+        donationPayload.donor_name = null;
+        donationPayload.donor_email = null;
+        donationPayload.donor_phone = null;
+      } else {
+        donationPayload.member_id = null;
+        donationPayload.donor_name = formData.donor_name;
+        donationPayload.donor_email = formData.donor_email || null;
+        donationPayload.donor_phone = formData.donor_phone || null;
+      }
 
       const { error: insertError } = await supabase
         .from('donations')
@@ -124,15 +147,20 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
 
       if (insertError) throw insertError;
 
-      setSuccess('Bağış kaydı başarıyla eklendi');
+      setSuccess('Bağış kaydı başarıyla eklendi ve kasaya otomatik olarak eklendi');
 
       const defaultMemberId = isAdmin && members.length > 0 ? members[0].id : currentMember.id;
       setFormData({
         member_id: defaultMemberId,
+        donor_name: '',
+        donor_email: '',
+        donor_phone: '',
         amount: '',
         donation_date: new Date().toISOString().split('T')[0],
         description: '',
-        payment_method: 'cash'
+        purpose: '',
+        payment_method: 'cash',
+        is_member: 'true'
       });
       setShowForm(false);
       await loadDonations();
@@ -155,8 +183,11 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
     if (!search) return true;
     const searchLower = search.toLowerCase();
     const memberName = (donation.members as any)?.full_name?.toLowerCase() || '';
+    const donorName = donation.donor_name?.toLowerCase() || '';
     const description = donation.description?.toLowerCase() || '';
-    return memberName.includes(searchLower) || description.includes(searchLower);
+    const purpose = donation.purpose?.toLowerCase() || '';
+    return memberName.includes(searchLower) || donorName.includes(searchLower) ||
+           description.includes(searchLower) || purpose.includes(searchLower);
   });
 
   if (loading) {
@@ -219,24 +250,94 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bağışçı *
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bağışçı Türü *
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="true"
+                    checked={formData.is_member === 'true'}
+                    onChange={(e) => setFormData({ ...formData, is_member: e.target.value })}
+                    className="mr-2"
+                  />
+                  <span>Üye</span>
                 </label>
-                <select
-                  value={formData.member_id}
-                  onChange={(e) => setFormData({ ...formData, member_id: e.target.value })}
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                >
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.full_name} ({member.email})
-                    </option>
-                  ))}
-                </select>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="false"
+                    checked={formData.is_member === 'false'}
+                    onChange={(e) => setFormData({ ...formData, is_member: e.target.value })}
+                    className="mr-2"
+                  />
+                  <span>Üye Olmayan</span>
+                </label>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formData.is_member === 'true' ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Üye Seçin *
+                  </label>
+                  <select
+                    value={formData.member_id}
+                    onChange={(e) => setFormData({ ...formData, member_id: e.target.value })}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    {members.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.full_name} ({member.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bağışçı Adı Soyadı *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.donor_name}
+                      onChange={(e) => setFormData({ ...formData, donor_name: e.target.value })}
+                      required
+                      placeholder="Ad Soyad"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      E-posta
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.donor_email}
+                      onChange={(e) => setFormData({ ...formData, donor_email: e.target.value })}
+                      placeholder="ornek@email.com"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Telefon
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.donor_phone}
+                      onChange={(e) => setFormData({ ...formData, donor_phone: e.target.value })}
+                      placeholder="0555 123 4567"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -282,6 +383,19 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                   <option value="other">Diğer</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bağış Amacı
+              </label>
+              <input
+                type="text"
+                value={formData.purpose}
+                onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                placeholder="Örn: Cami Onarımı, Genel Bağış, vb."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              />
             </div>
 
             <div>
@@ -370,11 +484,20 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                     {isAdmin && (
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {(donation.members as any)?.full_name || '-'}
+                          {donation.member_id
+                            ? (donation.members as any)?.full_name || '-'
+                            : donation.donor_name || 'Anonim'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {(donation.members as any)?.email || ''}
+                          {donation.member_id
+                            ? (donation.members as any)?.email || ''
+                            : donation.donor_email || ''}
                         </div>
+                        {!donation.member_id && (
+                          <div className="text-xs text-blue-600 font-semibold mt-1">
+                            Üye Olmayan
+                          </div>
+                        )}
                       </td>
                     )}
                     <td className="px-4 py-4 whitespace-nowrap">
@@ -396,8 +519,15 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <div className="text-sm text-gray-500 max-w-xs truncate">
-                        {donation.description || '-'}
+                      <div className="text-sm text-gray-900 max-w-xs">
+                        {donation.purpose && (
+                          <div className="font-medium text-blue-600 mb-1">
+                            {donation.purpose}
+                          </div>
+                        )}
+                        <div className="text-gray-500 truncate">
+                          {donation.description || '-'}
+                        </div>
                       </div>
                     </td>
                   </tr>

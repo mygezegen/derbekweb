@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Upload, Download, FileSpreadsheet, Users, DollarSign, Wallet } from 'lucide-react';
 
-type OperationType = 'debt' | 'payment' | 'member' | 'export';
+type OperationType = 'debt' | 'payment' | 'member' | 'export' | 'sql-import';
 
 export function BulkOperations() {
   const [activeOperation, setActiveOperation] = useState<OperationType>('debt');
@@ -44,7 +44,7 @@ export function BulkOperations() {
     });
   };
 
-  const downloadSampleTemplate = (type: 'debt' | 'payment' | 'member') => {
+  const downloadSampleTemplate = (type: 'debt' | 'payment' | 'member' | 'sql-import') => {
     let csv = '';
     let filename = '';
 
@@ -63,6 +63,11 @@ export function BulkOperations() {
       csv += 'Ahmet Yılmaz,ahmet@email.com,Sifre123,05551234567,İstanbul Türkiye\n';
       csv += 'Ayşe Demir,ayse@email.com,Sifre456,05559876543,Ankara Türkiye\n';
       filename = 'üye_yükleme_şablonu.csv';
+    } else if (type === 'sql-import') {
+      csv = 'Uye_No,TC_No,Ad_Soyad,Baba_Adi,Ana_Adi,Dogum_Yeri,Dogum_Tarihi,Kan_Grubu,Meslek,Ogrenim_Durumu,Medeni_Hali,Cinsiyet,Uyelik_Karar_No,Uyelik_Tarihi,Il,Ilce,Adres,E_Posta,Telefon_No,Uyelik_Durumu\n';
+      csv += '1001,12345678901,Ahmet Yılmaz,Mehmet,Fatma,Adıyaman,1985-05-15,A+,Mühendis,Üniversite,Evli,Erkek,2020/01,2020-01-15,Adıyaman,Çüngüş,Çaybaşı Köyü,ahmet@email.com,05551234567,Aktif\n';
+      csv += '1002,23456789012,Ayşe Demir,Ali,Zeynep,Adıyaman,1990-08-20,0+,Öğretmen,Üniversite,Bekar,Kadın,2020/02,2020-02-20,İstanbul,Kadıköy,Test Mahallesi,ayse@email.com,05559876543,Aktif\n';
+      filename = 'sql_uye_iceri_aktarma_sablonu.csv';
     }
 
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -335,6 +340,123 @@ export function BulkOperations() {
     }
   };
 
+  const handleSQLMemberImport = async () => {
+    if (!file) {
+      setError('Lütfen bir dosya seçin');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      const headers = rows[0];
+      const data = rows.slice(1);
+
+      const columnMap: { [key: string]: number } = {};
+      headers.forEach((header, index) => {
+        columnMap[header.trim()] = index;
+      });
+
+      const requiredFields = ['Ad_Soyad', 'E_Posta'];
+      const missingFields = requiredFields.filter(field => !(field in columnMap));
+      if (missingFields.length > 0) {
+        throw new Error(`CSV dosyasında gerekli sütunlar bulunamadı: ${missingFields.join(', ')}`);
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-member`;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      let successCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      for (const row of data) {
+        try {
+          const fullName = row[columnMap['Ad_Soyad']]?.trim();
+          const email = row[columnMap['E_Posta']]?.trim();
+
+          if (!fullName || !email) {
+            throw new Error('Ad Soyad ve E-posta gereklidir');
+          }
+
+          const membershipNumber = row[columnMap['Uye_No']]?.trim() || '';
+          const tcNo = row[columnMap['TC_No']]?.trim() || '';
+          const fatherName = row[columnMap['Baba_Adi']]?.trim() || '';
+          const motherName = row[columnMap['Ana_Adi']]?.trim() || '';
+          const birthPlace = row[columnMap['Dogum_Yeri']]?.trim() || '';
+          const birthDate = row[columnMap['Dogum_Tarihi']]?.trim() || '';
+          const bloodType = row[columnMap['Kan_Grubu']]?.trim() || '';
+          const profession = row[columnMap['Meslek']]?.trim() || '';
+          const education = row[columnMap['Ogrenim_Durumu']]?.trim() || '';
+          const maritalStatus = row[columnMap['Medeni_Hali']]?.trim() || '';
+          const gender = row[columnMap['Cinsiyet']]?.trim() || '';
+          const membershipDecision = row[columnMap['Uyelik_Karar_No']]?.trim() || '';
+          const membershipDate = row[columnMap['Uyelik_Tarihi']]?.trim() || '';
+          const province = row[columnMap['Il']]?.trim() || '';
+          const district = row[columnMap['Ilce']]?.trim() || '';
+          const address = row[columnMap['Adres']]?.trim() || '';
+          const phone = row[columnMap['Telefon_No']]?.trim() || '';
+          const membershipStatus = row[columnMap['Uyelik_Durumu']]?.trim() || 'Aktif';
+
+          const defaultPassword = tcNo || `Caybasi${membershipNumber}`;
+
+          const fullAddress = [address, district, province].filter(Boolean).join(', ');
+
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email,
+              password: defaultPassword,
+              full_name: fullName,
+              phone,
+              address: fullAddress,
+              membership_number: membershipNumber,
+              tc_no: tcNo,
+              father_name: fatherName,
+              mother_name: motherName,
+              birth_place: birthPlace,
+              birth_date: birthDate || null,
+              blood_type: bloodType,
+              profession,
+              education_level: education,
+              marital_status: maritalStatus,
+              gender,
+              membership_decision_no: membershipDecision,
+              membership_date: membershipDate || null,
+              membership_status: membershipStatus === 'Aktif' ? 'active' : 'inactive'
+            }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Üye eklenemedi');
+          }
+
+          successCount++;
+        } catch (err) {
+          failCount++;
+          const emailForError = row[columnMap['E_Posta']]?.trim() || 'Bilinmeyen';
+          errors.push(`${emailForError} - ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
+        }
+      }
+
+      setResults({ successCount, failCount, errors });
+      setSuccess(`${successCount} üye başarıyla içe aktarıldı. ${failCount} kayıt başarısız.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'SQL içe aktarma başarısız');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportDebtors = async () => {
     setLoading(true);
     setError('');
@@ -401,6 +523,9 @@ export function BulkOperations() {
       case 'member':
         await handleBulkMemberUpload();
         break;
+      case 'sql-import':
+        await handleSQLMemberImport();
+        break;
       case 'export':
         await handleExportDebtors();
         break;
@@ -411,7 +536,7 @@ export function BulkOperations() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-800">Toplu İşlemler</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         <button
           onClick={() => setActiveOperation('debt')}
           className={`p-6 rounded-lg border-2 transition-all ${
@@ -449,6 +574,19 @@ export function BulkOperations() {
           <Users className={`mx-auto mb-3 ${activeOperation === 'member' ? 'text-blue-600' : 'text-gray-400'}`} size={32} />
           <h3 className="font-semibold text-gray-800">Toplu Üye Yükleme</h3>
           <p className="text-sm text-gray-600 mt-2">CSV ile üye ekle</p>
+        </button>
+
+        <button
+          onClick={() => setActiveOperation('sql-import')}
+          className={`p-6 rounded-lg border-2 transition-all ${
+            activeOperation === 'sql-import'
+              ? 'border-orange-600 bg-orange-50 shadow-lg'
+              : 'border-gray-200 hover:border-orange-300 bg-white'
+          }`}
+        >
+          <DollarSign className={`mx-auto mb-3 ${activeOperation === 'sql-import' ? 'text-orange-600' : 'text-gray-400'}`} size={32} />
+          <h3 className="font-semibold text-gray-800">SQL Üye İçe Aktarma</h3>
+          <p className="text-sm text-gray-600 mt-2">Eski veritabanından aktar</p>
         </button>
 
         <button
@@ -503,6 +641,7 @@ export function BulkOperations() {
               {activeOperation === 'debt' && 'Toplu Borç Yükleme'}
               {activeOperation === 'payment' && 'Toplu Tahsilat'}
               {activeOperation === 'member' && 'Toplu Üye Yükleme'}
+              {activeOperation === 'sql-import' && 'SQL Üye İçe Aktarma'}
             </h3>
 
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
@@ -534,10 +673,28 @@ export function BulkOperations() {
                       <li>adres veya address (opsiyonel)</li>
                     </ul>
                   )}
+                  {activeOperation === 'sql-import' && (
+                    <div className="space-y-2">
+                      <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
+                        <li>Ad_Soyad (zorunlu) - Üyenin adı soyadı</li>
+                        <li>E_Posta (zorunlu) - E-posta adresi</li>
+                        <li>Uye_No (opsiyonel) - Üyelik numarası</li>
+                        <li>TC_No (opsiyonel) - TC Kimlik No - Şifre olarak kullanılır</li>
+                        <li>Telefon_No (opsiyonel) - Telefon numarası</li>
+                        <li>Dogum_Tarihi (opsiyonel) - YYYY-MM-DD formatında</li>
+                        <li>Il, Ilce, Adres (opsiyonel) - Adres bilgileri</li>
+                        <li>Diğer tüm alanlar (opsiyonel)</li>
+                      </ul>
+                      <div className="bg-orange-100 border border-orange-300 rounded p-2 mt-2">
+                        <p className="text-xs text-orange-800 font-semibold">Otomatik Şifre:</p>
+                        <p className="text-xs text-orange-700">TC No varsa TC No, yoksa "Caybasi" + Üye No şifre olarak atanır</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <button
                   type="button"
-                  onClick={() => downloadSampleTemplate(activeOperation as 'debt' | 'payment' | 'member')}
+                  onClick={() => downloadSampleTemplate(activeOperation as 'debt' | 'payment' | 'member' | 'sql-import')}
                   className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium ml-4 whitespace-nowrap"
                 >
                   <Download size={18} />

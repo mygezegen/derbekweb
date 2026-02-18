@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Mail, MessageSquare } from 'lucide-react';
+import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Mail, MessageSquare, Wallet } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
+import { TreasuryManagement } from './TreasuryManagement';
 
 interface AdminPanelProps {
   onRefresh: () => void;
 }
 
 export function AdminPanel({ onRefresh }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'notifications'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'notifications' | 'treasury'>('members');
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -278,6 +279,18 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
             >
               <Mail size={18} className="sm:w-5 sm:h-5" />
               Bildirimler
+            </button>
+            <button
+              onClick={() => setActiveTab('treasury')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'treasury'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Wallet size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Kasa Yönetimi</span>
+              <span className="sm:hidden">Kasa</span>
             </button>
           </div>
         </div>
@@ -580,6 +593,12 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'treasury' && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+          <TreasuryManagement />
         </div>
       )}
     </div>

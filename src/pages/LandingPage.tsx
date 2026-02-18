@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle, Youtube, Instagram, Facebook } from 'lucide-react';
+import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle, Youtube, Instagram, Facebook, LogIn } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
+import { GalleryModal } from '../components/GalleryModal';
+import { GalleryImage } from '../types';
 
 interface Announcement {
   id: string;
@@ -22,7 +24,9 @@ interface Event {
 interface GalleryItem {
   id: string;
   title: string;
+  media_type: 'image' | 'youtube' | 'instagram' | 'facebook';
   image_url: string;
+  video_url?: string;
   created_at: string;
 }
 
@@ -54,6 +58,9 @@ export default function LandingPage() {
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [boardMembers, setBoardMembers] = useState<BoardMember[]>([]);
   const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<GalleryImage | null>(null);
+  const [selectedGalleryImages, setSelectedGalleryImages] = useState<GalleryImage[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -95,11 +102,30 @@ export default function LandingPage() {
     if (galleryData) {
       setGallery(galleryData.map(item => ({
         ...item,
+        media_type: 'image' as 'image' | 'youtube' | 'instagram',
         image_url: item.cover_image_url || ''
       })));
     }
     if (boardData) setBoardMembers(boardData);
     if (contactData) setContactInfo(contactData);
+  };
+
+  const handleGalleryClick = async (item: GalleryItem) => {
+    const { data: galleryImages } = await supabase
+      .from('gallery_images')
+      .select('*')
+      .eq('gallery_id', item.id)
+      .order('display_order', { ascending: true });
+
+    if (galleryImages && galleryImages.length > 0) {
+      const images = galleryImages.map(img => ({
+        ...img,
+        media_type: img.media_type || 'image'
+      }));
+      setSelectedGalleryImages(images);
+      setCurrentImageIndex(0);
+      setSelectedGalleryImage(images[0]);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -114,7 +140,19 @@ export default function LandingPage() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-amber-50 to-rose-50">
       <div className="relative bg-gradient-to-r from-emerald-500 via-green-500 to-emerald-600 text-white">
         <div className="absolute inset-0 bg-black opacity-5"></div>
-        <div className="relative z-10 container mx-auto px-4 py-12 text-center">
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={() => navigate('/login')}
+            className="flex items-center gap-2 bg-white text-emerald-600 px-6 py-3 rounded-lg font-semibold hover:bg-emerald-50 transition-colors shadow-lg"
+          >
+            <LogIn size={20} />
+            Üye Girişi
+          </button>
+        </div>
+        <button
+          onClick={() => navigate('/')}
+          className="relative z-10 container mx-auto px-4 py-12 text-center w-full hover:opacity-90 transition-opacity cursor-pointer"
+        >
           <div className="mb-6 flex justify-center">
             <div className="w-32 h-32 bg-white rounded-full p-2 shadow-2xl">
               <img
@@ -133,10 +171,114 @@ export default function LandingPage() {
           <p className="mt-4 text-lg opacity-90 max-w-2xl mx-auto">
             Birlikte daha güçlüyüz. Yardımlaşma ve dayanışma ruhuyla geleceğe yürüyoruz.
           </p>
-        </div>
+        </button>
       </div>
 
       <div className="container mx-auto px-4 py-12 max-w-7xl">
+        <section className="mb-16">
+          <div className="flex items-center justify-center mb-8">
+            <Mail className="w-8 h-8 text-emerald-600 mr-3" />
+            <h2 className="text-3xl font-bold text-gray-800">İletişim</h2>
+          </div>
+          <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+                  Bize Ulaşın
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-emerald-100 p-3 rounded-lg">
+                      <MapPin className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Adres</h4>
+                      <p className="text-gray-600">
+                        {contactInfo?.address || 'Çaybaşı Köyü, Çüngüş, Diyarbakır'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-rose-100 p-3 rounded-lg">
+                      <Phone className="w-6 h-6 text-rose-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Telefon</h4>
+                      <p className="text-gray-600">{contactInfo?.phone || '+90 XXX XXX XX XX'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-4">
+                    <div className="bg-amber-100 p-3 rounded-lg">
+                      <Mail className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">E-posta</h4>
+                      <p className="text-gray-600">{contactInfo?.email || 'info@caybasi.org'}</p>
+                    </div>
+                  </div>
+
+                  {contactInfo?.social_media && (contactInfo.social_media.youtube || contactInfo.social_media.instagram || contactInfo.social_media.facebook) && (
+                    <div className="pt-6 border-t border-gray-200">
+                      <h4 className="font-semibold text-gray-800 mb-4">Sosyal Medya</h4>
+                      <div className="flex items-center gap-4">
+                        {contactInfo.social_media.youtube && (
+                          <a
+                            href={contactInfo.social_media.youtube}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-red-100 p-3 rounded-lg hover:bg-red-200 transition-colors group"
+                            title="YouTube"
+                          >
+                            <Youtube className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                        {contactInfo.social_media.instagram && (
+                          <a
+                            href={contactInfo.social_media.instagram}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-pink-100 p-3 rounded-lg hover:bg-pink-200 transition-colors group"
+                            title="Instagram"
+                          >
+                            <Instagram className="w-6 h-6 text-pink-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                        {contactInfo.social_media.facebook && (
+                          <a
+                            href={contactInfo.social_media.facebook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-blue-100 p-3 rounded-lg hover:bg-blue-200 transition-colors group"
+                            title="Facebook"
+                          >
+                            <Facebook className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-emerald-50 to-amber-50 rounded-lg p-8 flex flex-col justify-center items-center text-center">
+                <Users className="w-16 h-16 text-emerald-600 mb-4" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                  Üye Olmak İster misiniz?
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Derneğimize katılarak köyümüzün ve hemşehrilerimizin kalkınmasına katkıda bulunabilirsiniz.
+                </p>
+                <button
+                  onClick={() => navigate('/app')}
+                  className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-green-700 transform hover:scale-105 transition-all duration-200"
+                >
+                  <span>Üye İşlemleri</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="mb-16">
           <div className="flex items-center justify-center mb-8">
             <Bell className="w-8 h-8 text-emerald-600 mr-3" />
@@ -250,19 +392,32 @@ export default function LandingPage() {
               {gallery.map((item) => (
                 <div
                   key={item.id}
-                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group"
+                  className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
+                  onClick={() => handleGalleryClick(item)}
                 >
                   <div className="relative h-64 overflow-hidden">
-                    <img
-                      src={item.image_url}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white font-semibold text-lg">{item.title}</h3>
+                    {item.cover_image_url ? (
+                      <>
+                        <img
+                          src={item.cover_image_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="absolute bottom-0 left-0 right-0 p-4">
+                            <h3 className="text-white font-semibold text-lg">{item.title}</h3>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+                        <div className="text-center text-white p-4">
+                          <Image className="w-12 h-12 mx-auto mb-3 opacity-90" />
+                          <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
+                          <p className="text-sm opacity-75">Galeriyi Görüntüle</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -274,111 +429,26 @@ export default function LandingPage() {
             </div>
           )}
         </section>
-
-        <section className="mb-16">
-          <div className="flex items-center justify-center mb-8">
-            <Mail className="w-8 h-8 text-emerald-600 mr-3" />
-            <h2 className="text-3xl font-bold text-gray-800">İletişim</h2>
-          </div>
-          <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-800 mb-6">
-                  Bize Ulaşın
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-emerald-100 p-3 rounded-lg">
-                      <MapPin className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">Adres</h4>
-                      <p className="text-gray-600">
-                        {contactInfo?.address || 'Çaybaşı Köyü, Çüngüş, Diyarbakır'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-rose-100 p-3 rounded-lg">
-                      <Phone className="w-6 h-6 text-rose-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">Telefon</h4>
-                      <p className="text-gray-600">{contactInfo?.phone || '+90 XXX XXX XX XX'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-amber-100 p-3 rounded-lg">
-                      <Mail className="w-6 h-6 text-amber-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">E-posta</h4>
-                      <p className="text-gray-600">{contactInfo?.email || 'info@caybasi.org'}</p>
-                    </div>
-                  </div>
-
-                  {contactInfo?.social_media && (contactInfo.social_media.youtube || contactInfo.social_media.instagram || contactInfo.social_media.facebook) && (
-                    <div className="pt-6 border-t border-gray-200">
-                      <h4 className="font-semibold text-gray-800 mb-4">Sosyal Medya</h4>
-                      <div className="flex items-center gap-4">
-                        {contactInfo.social_media.youtube && (
-                          <a
-                            href={contactInfo.social_media.youtube}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-red-100 p-3 rounded-lg hover:bg-red-200 transition-colors group"
-                            title="YouTube"
-                          >
-                            <Youtube className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
-                          </a>
-                        )}
-                        {contactInfo.social_media.instagram && (
-                          <a
-                            href={contactInfo.social_media.instagram}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-pink-100 p-3 rounded-lg hover:bg-pink-200 transition-colors group"
-                            title="Instagram"
-                          >
-                            <Instagram className="w-6 h-6 text-pink-600 group-hover:scale-110 transition-transform" />
-                          </a>
-                        )}
-                        {contactInfo.social_media.facebook && (
-                          <a
-                            href={contactInfo.social_media.facebook}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-blue-100 p-3 rounded-lg hover:bg-blue-200 transition-colors group"
-                            title="Facebook"
-                          >
-                            <Facebook className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="bg-gradient-to-br from-emerald-50 to-amber-50 rounded-lg p-8 flex flex-col justify-center items-center text-center">
-                <Users className="w-16 h-16 text-emerald-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">
-                  Üye Olmak İster misiniz?
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Derneğimize katılarak köyümüzün ve hemşehrilerimizin kalkınmasına katkıda bulunabilirsiniz.
-                </p>
-                <button
-                  onClick={() => navigate('/app')}
-                  className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-green-700 transform hover:scale-105 transition-all duration-200"
-                >
-                  <span>Üye İşlemleri</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
+
+      {selectedGalleryImage && (
+        <GalleryModal
+          item={selectedGalleryImage}
+          onClose={() => {
+            setSelectedGalleryImage(null);
+            setSelectedGalleryImages([]);
+            setCurrentImageIndex(0);
+          }}
+          currentMember={null}
+          isAuthenticated={false}
+          allImages={selectedGalleryImages}
+          currentIndex={currentImageIndex}
+          onNavigate={(index) => {
+            setCurrentImageIndex(index);
+            setSelectedGalleryImage(selectedGalleryImages[index]);
+          }}
+        />
+      )}
 
       <a
         href="https://wa.me/905322834038?text=Size%20www.caybasi.org%20%C3%BCzerinden%20ula%C5%9F%C4%B1yorum"

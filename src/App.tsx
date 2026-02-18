@@ -4,6 +4,8 @@ import { supabase } from './lib/supabase';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
+import { ResetPassword } from './pages/ResetPassword';
+import { Signup } from './pages/Signup';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 function MemberPortal() {
@@ -79,7 +81,10 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login onLoginSuccess={() => {}} />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/app" element={<MemberPortal />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

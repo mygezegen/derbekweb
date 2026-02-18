@@ -7,6 +7,7 @@ export interface Member {
   address?: string;
   avatar_url?: string;
   is_admin: boolean;
+  is_root: boolean;
   joined_at: string;
   updated_at: string;
 
@@ -112,7 +113,9 @@ export interface Gallery {
 export interface GalleryImage {
   id: string;
   gallery_id: string;
+  media_type: 'image' | 'youtube' | 'instagram' | 'facebook';
   image_url: string;
+  video_url?: string;
   caption?: string;
   display_order: number;
   created_by: string;
@@ -196,4 +199,26 @@ export interface PageSetting {
   description?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Permission {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  category: string;
+  created_at: string;
+}
+
+export interface RolePermission {
+  id: string;
+  role: 'root' | 'admin' | 'member';
+  permission_code: string;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PermissionWithDetails extends RolePermission {
+  permissions?: Permission;
 }

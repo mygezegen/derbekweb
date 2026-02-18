@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Gallery, GalleryImage, Member } from '../types';
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload, Video, Instagram, Facebook } from 'lucide-react';
 import { logAction } from '../lib/auditLog';
+import { MediaRenderer } from './MediaRenderer';
+import { GalleryModal } from './GalleryModal';
 
 interface GalleryManagementProps {
   currentMember: Member;
@@ -19,6 +21,8 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
   const [editingGallery, setEditingGallery] = useState<Gallery | null>(null);
   const [loading, setLoading] = useState(true);
   const [bulkUploadProgress, setBulkUploadProgress] = useState<string>('');
+  const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [galleryFormData, setGalleryFormData] = useState({
     title: '',
     description: '',
@@ -26,7 +30,9 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
     cover_image_url: ''
   });
   const [imageFormData, setImageFormData] = useState({
+    media_type: 'image' as 'image' | 'youtube' | 'instagram' | 'facebook',
     image_url: '',
+    video_url: '',
     caption: '',
     display_order: 0
   });
@@ -122,7 +128,9 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
 
       setShowImageForm(false);
       setImageFormData({
+        media_type: 'image',
         image_url: '',
+        video_url: '',
         caption: '',
         display_order: 0
       });
@@ -459,18 +467,130 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
           {isAdmin && showImageForm && (
             <form onSubmit={handleImageSubmit} className="mb-6 space-y-4 bg-gray-50 p-4 rounded-lg">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Fotoğraf URL
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Medya Türü
                 </label>
-                <input
-                  type="url"
-                  value={imageFormData.image_url}
-                  onChange={(e) => setImageFormData({ ...imageFormData, image_url: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://example.com/photo.jpg"
-                  required
-                />
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="image"
+                      checked={imageFormData.media_type === 'image'}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <ImageIcon size={18} />
+                    <span>Fotoğraf</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="youtube"
+                      checked={imageFormData.media_type === 'youtube'}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' })}
+                      className="w-4 h-4 text-red-600"
+                    />
+                    <Video size={18} />
+                    <span>YouTube</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="instagram"
+                      checked={imageFormData.media_type === 'instagram'}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' | 'facebook' })}
+                      className="w-4 h-4 text-pink-600"
+                    />
+                    <Instagram size={18} />
+                    <span>Instagram</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="facebook"
+                      checked={imageFormData.media_type === 'facebook'}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' | 'facebook' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Facebook size={18} />
+                    <span>Facebook</span>
+                  </label>
+                </div>
               </div>
+
+              {imageFormData.media_type === 'image' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Fotoğraf URL
+                  </label>
+                  <input
+                    type="url"
+                    value={imageFormData.image_url}
+                    onChange={(e) => setImageFormData({ ...imageFormData, image_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/photo.jpg"
+                    required
+                  />
+                </div>
+              )}
+
+              {imageFormData.media_type === 'youtube' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    YouTube Video URL veya ID
+                  </label>
+                  <input
+                    type="text"
+                    value={imageFormData.video_url}
+                    onChange={(e) => setImageFormData({ ...imageFormData, video_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ veya dQw4w9WgXcQ"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-600">
+                    Tam YouTube URL'sini veya sadece video ID'sini girebilirsiniz
+                  </p>
+                </div>
+              )}
+
+              {imageFormData.media_type === 'instagram' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Instagram Post URL
+                  </label>
+                  <input
+                    type="url"
+                    value={imageFormData.video_url}
+                    onChange={(e) => setImageFormData({ ...imageFormData, video_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    placeholder="https://www.instagram.com/p/ABC123xyz/"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-600">
+                    Instagram post URL'sini girin (örn: https://www.instagram.com/p/...)
+                  </p>
+                </div>
+              )}
+
+              {imageFormData.media_type === 'facebook' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Facebook Video/Post URL
+                  </label>
+                  <input
+                    type="url"
+                    value={imageFormData.video_url}
+                    onChange={(e) => setImageFormData({ ...imageFormData, video_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://www.facebook.com/..."
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-600">
+                    Facebook video veya post URL'sini girin (örn: https://www.facebook.com/watch?v=...)
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Açıklama
@@ -506,7 +626,9 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
                   onClick={() => {
                     setShowImageForm(false);
                     setImageFormData({
+                      media_type: 'image',
                       image_url: '',
+                      video_url: '',
                       caption: '',
                       display_order: 0
                     });
@@ -577,20 +699,28 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {galleryImages.map((image) => (
               <div key={image.id} className="relative group">
-                <img
-                  src={image.image_url}
-                  alt={image.caption || 'Galeri fotoğrafı'}
-                  className="w-full h-64 object-cover rounded-lg"
-                />
+                <div
+                  className="w-full h-64 rounded-lg overflow-hidden cursor-pointer"
+                  onClick={() => {
+                    const index = galleryImages.findIndex(img => img.id === image.id);
+                    setCurrentImageIndex(index);
+                    setSelectedImage(image);
+                  }}
+                >
+                  <MediaRenderer item={image} className="w-full h-full object-cover" />
+                </div>
                 {image.caption && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 rounded-b-lg pointer-events-none">
                     <p className="text-sm">{image.caption}</p>
                   </div>
                 )}
                 {isAdmin && (
                   <button
-                    onClick={() => handleDeleteImage(image.id)}
-                    className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteImage(image.id);
+                    }}
+                    className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -599,11 +729,29 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
             ))}
             {galleryImages.length === 0 && (
               <div className="col-span-3 text-center py-8 text-gray-500">
-                Bu galeride henüz fotoğraf yok
+                Bu galeride henüz içerik yok
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {selectedImage && (
+        <GalleryModal
+          item={selectedImage}
+          onClose={() => {
+            setSelectedImage(null);
+            setCurrentImageIndex(0);
+          }}
+          currentMember={currentMember}
+          isAuthenticated={true}
+          allImages={galleryImages}
+          currentIndex={currentImageIndex}
+          onNavigate={(index) => {
+            setCurrentImageIndex(index);
+            setSelectedImage(galleryImages[index]);
+          }}
+        />
       )}
     </div>
   );
