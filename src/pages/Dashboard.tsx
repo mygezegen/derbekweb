@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -16,6 +16,7 @@ import { PageSettings } from '../components/PageSettings';
 import { SMTPConfiguration } from '../components/SMTPConfiguration';
 import { BoardManagement } from '../components/BoardManagement';
 import { EmailTemplates } from '../components/EmailTemplates';
+import { TreasuryManagement } from '../components/TreasuryManagement';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -24,7 +25,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'gallery' | 'contact' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'board' | 'email-templates'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'board' | 'email-templates'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -163,11 +164,17 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const allTabs = [
     { id: 'home', label: 'Ana Sayfa', icon: Home, pageKey: 'home' },
     { id: 'members', label: (currentMember?.is_admin || currentMember?.is_root) ? 'Üyeler' : 'Üye Bilgileri', icon: Users, pageKey: 'members' },
-    { id: 'contact', label: 'İletişim', icon: Phone, pageKey: 'contact' },
     { id: 'announcements', label: 'Duyurular', icon: Bell, pageKey: 'announcements' },
     { id: 'events', label: 'Etkinlikler', icon: Calendar, pageKey: 'events' },
     { id: 'dues', label: 'Aidatlar', icon: DollarSign, pageKey: 'dues' },
+    ...((currentMember?.is_admin || currentMember?.is_root) ? [
+      { id: 'treasury', label: 'Kasa Yönetimi', icon: Wallet, pageKey: 'treasury' },
+    ] : []),
     { id: 'gallery', label: 'Galeri', icon: Image, pageKey: 'gallery' },
+    { id: 'contact', label: 'İletişim', icon: Phone, pageKey: 'contact' },
+    ...((currentMember?.is_admin || currentMember?.is_root) ? [
+      { id: 'notifications', label: 'Bildirimler', icon: MessageSquare, pageKey: 'notifications' },
+    ] : []),
     ...((currentMember?.is_admin || currentMember?.is_root) ? [
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
@@ -179,7 +186,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'board' || tab.pageKey === 'email-templates') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -474,6 +481,30 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'email-templates' && currentMember?.is_admin && (
           <EmailTemplates />
+        )}
+
+        {activeTab === 'treasury' && currentMember?.is_admin && (
+          <TreasuryManagement />
+        )}
+
+        {activeTab === 'notifications' && currentMember?.is_admin && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Bildirim Gönder</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bildirim Türü
+                </label>
+                <select
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
+                >
+                  <option>E-posta (Yakında)</option>
+                </select>
+                <p className="text-sm text-gray-500 mt-1">Bildirim sistemi yakında aktif olacak</p>
+              </div>
+            </div>
+          </div>
         )}
           </div>
         </main>

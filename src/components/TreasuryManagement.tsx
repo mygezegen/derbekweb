@@ -81,7 +81,7 @@ export function TreasuryManagement() {
       .select(`
         *,
         transaction_categories (name, type),
-        members (full_name)
+        members!transactions_member_id_fkey (full_name)
       `)
       .order('transaction_date', { ascending: false });
 
@@ -101,7 +101,14 @@ export function TreasuryManagement() {
       query = query.lte('transaction_date', dateRange.end);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error loading transactions:', error);
+    } else {
+      console.log('Loaded transactions:', data);
+    }
+
     return data || [];
   };
 
