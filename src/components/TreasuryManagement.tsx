@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Wallet, TrendingUp, TrendingDown, DollarSign, Calendar, Filter, Download, Plus } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, DollarSign, Calendar, Filter, Download, Plus, Edit2, Trash2 } from 'lucide-react';
 import { TransactionEntry } from './TransactionEntry';
 import { BulkTransactionImport } from './BulkTransactionImport';
 import { FinancialReport } from './FinancialReport';
@@ -40,7 +40,11 @@ interface Category {
   is_active: boolean;
 }
 
-export function TreasuryManagement() {
+interface TreasuryManagementProps {
+  isRoot?: boolean;
+}
+
+export function TreasuryManagement({ isRoot = false }: TreasuryManagementProps) {
   const [summary, setSummary] = useState<TreasurySummary | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -135,6 +139,30 @@ export function TreasuryManagement() {
       other: 'Diğer'
     };
     return labels[method] || method;
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    if (!isRoot) {
+      alert('Sadece root kullanıcısı işlem silebilir');
+      return;
+    }
+
+    if (!confirm('Bu işlemi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      alert('İşlem başarıyla silindi');
+      await loadData();
+    } catch (err) {
+      console.error('Error deleting transaction:', err);
+      alert(err instanceof Error ? err.message : 'İşlem silinirken hata oluştu');
+    }
   };
 
   if (loading) {
@@ -295,12 +323,15 @@ export function TreasuryManagement() {
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tutar
                 </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  İşlemler
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                     Henüz işlem bulunmamaktadır
                   </td>
                 </tr>
@@ -344,6 +375,17 @@ export function TreasuryManagement() {
                         {transaction.type === 'income' ? '+' : '-'}
                         {formatCurrency(transaction.amount)}
                       </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {isRoot && (
+                        <button
+                          onClick={() => handleDeleteTransaction(transaction.id)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Sadece root kullanıcısı silebilir"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

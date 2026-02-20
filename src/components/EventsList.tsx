@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Event, EventParticipant } from '../types';
-import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays } from 'lucide-react';
+import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays, Image as ImageIcon, FileText } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
+import { MemberSelectionModal } from './MemberSelectionModal';
 
 interface EventsListProps {
   events: Event[];
@@ -25,6 +26,13 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
   const [participantCounts, setParticipantCounts] = useState<Record<string, number>>({});
   const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+  const [showParticipantModal, setShowParticipantModal] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showParticipantReport, setShowParticipantReport] = useState(false);
+  const [reportEventId, setReportEventId] = useState<string | null>(null);
+  const [eventParticipants, setEventParticipants] = useState<any[]>([]);
 
   useEffect(() => {
     loadCurrentMember();
@@ -79,12 +87,24 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
           .from('event_participants')
           .select('*', { count: 'exact', head: true })
           .eq('event_id', eventId)
-          .eq('status', 'attending');
+          .eq('status', 'confirmed');
         counts[eventId] = count || 0;
       }
       setParticipantCounts(counts);
     } catch (error) {
       console.error('Error loading participation data:', error);
+    }
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -107,6 +127,28 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
 
       const fullDateTime = new Date(`${eventDate}T${eventTime}`).toISOString();
 
+      let imageUrl = '';
+      let imagePublicId = '';
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `events/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+        imagePublicId = filePath;
+      }
+
       const { error: insertError } = await supabase
         .from('events')
         .insert({
@@ -115,6 +157,8 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
           event_date: fullDateTime,
           location,
           created_by: memberData.id,
+          image_url: imageUrl || undefined,
+          image_public_id: imagePublicId || undefined,
         });
 
       if (insertError) throw insertError;
@@ -134,6 +178,8 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
       setEventDate('');
       setEventTime('');
       setLocation('');
+      setImageFile(null);
+      setImagePreview('');
       setShowForm(false);
       onRefresh();
     } catch (err) {
@@ -183,7 +229,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
     });
   };
 
-  const handleParticipationToggle = async (eventId: string, newStatus: 'attending' | 'not_attending') => {
+  const handleParticipationToggle = async (eventId: string, newStatus: 'confirmed' | 'cancelled') => {
     if (!currentMemberId) return;
 
     try {
@@ -214,6 +260,56 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
       await loadParticipationData();
     } catch (error) {
       console.error('Error updating participation:', error);
+    }
+  };
+
+  const handleAddParticipants = async (memberIds: string[]) => {
+    if (!selectedEventId) return;
+
+    try {
+      const participants = memberIds.map(memberId => ({
+        event_id: selectedEventId,
+        member_id: memberId,
+        status: 'confirmed'
+      }));
+
+      const { error } = await supabase
+        .from('event_participants')
+        .insert(participants);
+
+      if (error) throw error;
+
+      await loadParticipationData();
+      setShowParticipantModal(false);
+      setSelectedEventId(null);
+    } catch (error) {
+      console.error('Error adding participants:', error);
+      alert('Katılımcılar eklenirken bir hata oluştu');
+    }
+  };
+
+  const loadEventParticipants = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_participants')
+        .select(`
+          *,
+          members:member_id (
+            full_name,
+            email,
+            phone
+          )
+        `)
+        .eq('event_id', eventId)
+        .order('registered_at', { ascending: false });
+
+      if (error) throw error;
+
+      setEventParticipants(data || []);
+      setReportEventId(eventId);
+      setShowParticipantReport(true);
+    } catch (error) {
+      console.error('Error loading event participants:', error);
     }
   };
 
@@ -327,6 +423,26 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
               placeholder="Etkinlik açıklaması yazın..."
             />
           </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Etkinlik Görseli
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            {imagePreview && (
+              <div className="mt-2">
+                <img
+                  src={imagePreview}
+                  alt="Önizleme"
+                  className="max-w-xs rounded-lg border border-gray-300"
+                />
+              </div>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -344,6 +460,8 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                 setEventDate('');
                 setEventTime('');
                 setLocation('');
+                setImageFile(null);
+                setImagePreview('');
                 setError('');
               }}
               className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
@@ -352,6 +470,138 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
             </button>
           </div>
         </form>
+      )}
+
+      {showParticipantModal && (
+        <MemberSelectionModal
+          onClose={() => {
+            setShowParticipantModal(false);
+            setSelectedEventId(null);
+          }}
+          onSelect={handleAddParticipants}
+          title="Katılımcı Ekle"
+        />
+      )}
+
+      {showParticipantReport && reportEventId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-800">
+                  Katılımcı Raporu
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowParticipantReport(false);
+                    setReportEventId(null);
+                    setEventParticipants([]);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <p className="text-lg font-semibold text-gray-700">
+                  Toplam Katılımcı: <span className="text-blue-600">{eventParticipants.length}</span>
+                </p>
+              </div>
+
+              {eventParticipants.length === 0 ? (
+                <p className="text-center text-gray-600 py-8">Henüz katılımcı yok</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left">Ad Soyad</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">E-posta</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Telefon</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Durum</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left">Kayıt Tarihi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eventParticipants.map((participant) => (
+                        <tr key={participant.id} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            {participant.members?.full_name || '-'}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {participant.members?.email || '-'}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {participant.members?.phone || '-'}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              participant.status === 'confirmed'
+                                ? 'bg-green-100 text-green-800'
+                                : participant.status === 'pending'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {participant.status === 'confirmed' ? 'Onaylandı' :
+                               participant.status === 'pending' ? 'Bekliyor' : 'İptal'}
+                            </span>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {new Date(participant.registered_at).toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    const event = events.find(e => e.id === reportEventId);
+                    const csv = [
+                      ['Ad Soyad', 'E-posta', 'Telefon', 'Durum', 'Kayıt Tarihi'],
+                      ...eventParticipants.map(p => [
+                        p.members?.full_name || '',
+                        p.members?.email || '',
+                        p.members?.phone || '',
+                        p.status === 'confirmed' ? 'Onaylandı' : p.status === 'pending' ? 'Bekliyor' : 'İptal',
+                        new Date(p.registered_at).toLocaleDateString('tr-TR')
+                      ])
+                    ].map(row => row.join(',')).join('\n');
+
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${event?.title || 'etkinlik'}-katilimcilar.csv`;
+                    link.click();
+                  }}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  CSV İndir
+                </button>
+                <button
+                  onClick={() => {
+                    setShowParticipantReport(false);
+                    setReportEventId(null);
+                    setEventParticipants([]);
+                  }}
+                  className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {viewMode === 'calendar' ? (
@@ -369,12 +619,21 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
           <div className="space-y-4">
             {upcomingEvents.map((event) => {
               const participation = myParticipation[event.id];
-              const isAttending = participation?.status === 'attending';
-              const isNotAttending = participation?.status === 'not_attending';
+              const isAttending = participation?.status === 'confirmed';
+              const isNotAttending = participation?.status === 'cancelled';
               const attendeeCount = participantCounts[event.id] || 0;
 
               return (
                 <div key={event.id} className="border-l-4 border-green-500 bg-green-50 rounded-lg p-4">
+                  {(event as any).image_url && (
+                    <div className="mb-4 rounded-lg overflow-hidden">
+                      <img
+                        src={(event as any).image_url}
+                        alt={event.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    </div>
+                  )}
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="text-lg font-semibold text-gray-800 mb-2">
@@ -402,9 +661,9 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                           dangerouslySetInnerHTML={{ __html: event.description }}
                         />
                       )}
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button
-                          onClick={() => handleParticipationToggle(event.id, 'attending')}
+                          onClick={() => handleParticipationToggle(event.id, 'confirmed')}
                           className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                             isAttending
                               ? 'bg-green-600 text-white'
@@ -415,7 +674,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                           Katılacağım
                         </button>
                         <button
-                          onClick={() => handleParticipationToggle(event.id, 'not_attending')}
+                          onClick={() => handleParticipationToggle(event.id, 'cancelled')}
                           className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                             isNotAttending
                               ? 'bg-red-600 text-white'
@@ -425,6 +684,27 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                           <X size={16} />
                           Katılamayacağım
                         </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setSelectedEventId(event.id);
+                                setShowParticipantModal(true);
+                              }}
+                              className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                            >
+                              <Users size={16} />
+                              Katılımcı Ekle
+                            </button>
+                            <button
+                              onClick={() => loadEventParticipants(event.id)}
+                              className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium bg-gray-700 text-white hover:bg-gray-800 transition-colors"
+                            >
+                              <FileText size={16} />
+                              Katılımcı Raporu
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                     {isAdmin && (

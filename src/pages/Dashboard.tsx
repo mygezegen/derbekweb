@@ -446,6 +446,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           <DuesManagement
             currentMember={currentMember}
             isAdmin={currentMember.is_admin}
+            isRoot={currentMember.is_root}
           />
         )}
 
@@ -491,7 +492,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
         )}
 
         {activeTab === 'treasury' && currentMember?.is_admin && (
-          <TreasuryManagement />
+          <TreasuryManagement
+            isRoot={currentMember?.is_root || false}
+          />
         )}
 
         {activeTab === 'notifications' && currentMember?.is_admin && (

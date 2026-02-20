@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member, Dues, MemberDuesWithDetails } from '../types';
-import { Search, DollarSign, Check, X, Save } from 'lucide-react';
+import { Search, DollarSign, Check, X, Save, Edit2, Trash2 } from 'lucide-react';
 
 function numberToTurkishWords(n: number): string {
   if (n === 0) return 'Sıfır';
@@ -47,6 +47,8 @@ export function PaymentCollection() {
   const [receiptNo, setReceiptNo] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [isRoot, setIsRoot] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -54,6 +56,16 @@ export function PaymentCollection() {
 
   const loadData = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: memberData } = await supabase
+          .from('members')
+          .select('is_root')
+          .eq('auth_id', user.id)
+          .maybeSingle();
+        setIsRoot(memberData?.is_root || false);
+      }
+
       const [membersData, duesData, memberDuesData] = await Promise.all([
         supabase.from('members').select('*').eq('is_active', true).order('full_name'),
         supabase.from('dues').select('*').order('period_year', { ascending: false }),
@@ -214,6 +226,42 @@ export function PaymentCollection() {
     );
   };
 
+  const handleEditPayment = (payment: MemberDuesWithDetails) => {
+    setEditingPaymentId(payment.id);
+    setSelectedMember(payment.member_id);
+    setSelectedDues(payment.dues_id);
+    setPaymentAmount(payment.paid_amount.toString());
+    setPaymentMethod(payment.payment_method as any || 'cash');
+    setPaymentNotes(payment.notes || '');
+    setReceiptNo(payment.receipt_no || '');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeletePayment = async (id: string) => {
+    if (!isRoot) {
+      alert('Sadece root kullanıcısı ödeme silebilir');
+      return;
+    }
+
+    if (!confirm('Bu ödeme kaydını silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('member_dues')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSuccess('Ödeme kaydı başarıyla silindi');
+      await loadData();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ödeme silinirken hata oluştu');
+      setTimeout(() => setError(''), 8000);
+    }
+  };
+
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -231,28 +279,55 @@ export function PaymentCollection() {
     }
 
     try {
-      const currentDues = getCurrentMemberDues();
+      if (editingPaymentId) {
+        const editingPayment = memberDues.find(md => md.id === editingPaymentId);
+        if (!editingPayment) {
+          setError('Düzenlenecek ödeme bulunamadı');
+          return;
+        }
 
-      if (currentDues) {
-        const dueAmount = currentDues.dues?.amount || 0;
-        const alreadyPaid = currentDues.paid_amount || 0;
-        const totalPaid = alreadyPaid + amount;
-        const newStatus = totalPaid >= dueAmount ? 'paid' : 'pending';
+        const selectedDuesItem = dues.find(d => d.id === selectedDues);
+        const dueAmount = selectedDuesItem?.amount || 0;
+        const newStatus = amount >= dueAmount ? 'paid' : 'pending';
 
         const { error: updateError } = await supabase
           .from('member_dues')
           .update({
-            paid_amount: totalPaid,
+            paid_amount: amount,
             status: newStatus,
-            paid_at: newStatus === 'paid' ? new Date().toISOString() : currentDues.paid_at,
+            paid_at: newStatus === 'paid' ? new Date().toISOString() : editingPayment.paid_at,
             payment_method: paymentMethod,
-            notes: paymentNotes || currentDues.notes,
-            receipt_no: receiptNo || currentDues.receipt_no
+            notes: paymentNotes,
+            receipt_no: receiptNo
           })
-          .eq('id', currentDues.id);
+          .eq('id', editingPaymentId);
 
         if (updateError) throw updateError;
+        setSuccess('Ödeme kaydı başarıyla güncellendi');
+        setEditingPaymentId(null);
       } else {
+        const currentDues = getCurrentMemberDues();
+
+        if (currentDues) {
+          const dueAmount = currentDues.dues?.amount || 0;
+          const alreadyPaid = currentDues.paid_amount || 0;
+          const totalPaid = alreadyPaid + amount;
+          const newStatus = totalPaid >= dueAmount ? 'paid' : 'pending';
+
+          const { error: updateError } = await supabase
+            .from('member_dues')
+            .update({
+              paid_amount: totalPaid,
+              status: newStatus,
+              paid_at: newStatus === 'paid' ? new Date().toISOString() : currentDues.paid_at,
+              payment_method: paymentMethod,
+              notes: paymentNotes || currentDues.notes,
+              receipt_no: receiptNo || currentDues.receipt_no
+            })
+            .eq('id', currentDues.id);
+
+          if (updateError) throw updateError;
+        } else {
         const selectedDuesItem = dues.find(d => d.id === selectedDues);
         if (!selectedDuesItem) {
           setError('Seçili aidat bulunamadı');
@@ -275,6 +350,7 @@ export function PaymentCollection() {
           });
 
         if (insertError) throw insertError;
+        }
       }
 
       const memberObj = members.find(m => m.id === selectedMember);
@@ -298,6 +374,7 @@ export function PaymentCollection() {
       setPaymentMethod('cash');
       setPaymentNotes('');
       setReceiptNo('');
+      setEditingPaymentId(null);
 
       loadData();
     } catch (err) {
@@ -367,7 +444,10 @@ export function PaymentCollection() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-semibold mb-6">Yeni Ödeme Kaydı</h3>
+        <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+          {editingPaymentId ? <Edit2 size={24} className="text-blue-600" /> : <DollarSign size={24} className="text-green-600" />}
+          {editingPaymentId ? 'Ödeme Kaydını Düzenle' : 'Yeni Ödeme Kaydı'}
+        </h3>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -520,11 +600,12 @@ export function PaymentCollection() {
                 setPaymentNotes('');
                 setReceiptNo('');
                 setSearch('');
+                setEditingPaymentId(null);
               }}
               className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
             >
               <X size={20} />
-              Temizle
+              {editingPaymentId ? 'İptal' : 'Temizle'}
             </button>
           </div>
         </form>
@@ -544,6 +625,7 @@ export function PaymentCollection() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ödeme Yöntemi</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlemler</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -576,11 +658,31 @@ export function PaymentCollection() {
                       {payment.status === 'paid' ? 'Ödendi' : 'Kısmi'}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEditPayment(payment)}
+                        className="text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Düzenle"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      {isRoot && (
+                        <button
+                          onClick={() => handleDeletePayment(payment.id)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Sadece root kullanıcısı silebilir"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {getRecentPayments().length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                     Henüz ödeme kaydı bulunmuyor
                   </td>
                 </tr>

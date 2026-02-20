@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Gift, Plus, Calendar, DollarSign, FileText, Search } from 'lucide-react';
+import { Gift, Plus, Calendar, DollarSign, FileText, Search, Edit2, Trash2 } from 'lucide-react';
 
 interface Donation {
   id: string;
@@ -24,9 +24,10 @@ interface Donation {
 interface DonationsProps {
   currentMember: Member;
   isAdmin: boolean;
+  isRoot?: boolean;
 }
 
-export function Donations({ currentMember, isAdmin }: DonationsProps) {
+export function Donations({ currentMember, isAdmin, isRoot = false }: DonationsProps) {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,7 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     member_id: '',
     donor_name: '',
@@ -111,6 +113,48 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
     }
   };
 
+  const handleEdit = (donation: Donation) => {
+    setEditingId(donation.id);
+    setFormData({
+      member_id: donation.member_id || '',
+      donor_name: donation.donor_name || '',
+      donor_email: donation.donor_email || '',
+      donor_phone: donation.donor_phone || '',
+      amount: donation.amount.toString(),
+      donation_date: donation.donation_date,
+      description: donation.description || '',
+      purpose: donation.purpose || '',
+      payment_method: donation.payment_method || 'cash',
+      is_member: donation.member_id ? 'true' : 'false'
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!isRoot) {
+      alert('Sadece root kullanıcısı bağış silebilir');
+      return;
+    }
+
+    if (!confirm('Bu bağışı silmek istediğinizden emin misiniz?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('donations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setSuccess('Bağış başarıyla silindi');
+      await loadDonations();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Bağış silinirken hata oluştu');
+      setTimeout(() => setError(''), 8000);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -141,13 +185,22 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
         donationPayload.donor_phone = formData.donor_phone || null;
       }
 
-      const { error: insertError } = await supabase
-        .from('donations')
-        .insert(donationPayload);
+      if (editingId) {
+        const { error: updateError } = await supabase
+          .from('donations')
+          .update(donationPayload)
+          .eq('id', editingId);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
+        setSuccess('Bağış kaydı başarıyla güncellendi');
+      } else {
+        const { error: insertError } = await supabase
+          .from('donations')
+          .insert(donationPayload);
 
-      setSuccess('Bağış kaydı başarıyla eklendi ve kasaya otomatik olarak eklendi');
+        if (insertError) throw insertError;
+        setSuccess('Bağış kaydı başarıyla eklendi ve kasaya otomatik olarak eklendi');
+      }
 
       const defaultMemberId = isAdmin && members.length > 0 ? members[0].id : currentMember.id;
       setFormData({
@@ -163,6 +216,7 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
         is_member: 'true'
       });
       setShowForm(false);
+      setEditingId(null);
       await loadDonations();
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
@@ -203,7 +257,25 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
         </div>
         {isAdmin && (
           <button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setShowForm(!showForm);
+              if (showForm) {
+                setEditingId(null);
+                const defaultMemberId = members.length > 0 ? members[0].id : '';
+                setFormData({
+                  member_id: defaultMemberId,
+                  donor_name: '',
+                  donor_email: '',
+                  donor_phone: '',
+                  amount: '',
+                  donation_date: new Date().toISOString().split('T')[0],
+                  description: '',
+                  purpose: '',
+                  payment_method: 'cash',
+                  is_member: 'true'
+                });
+              }
+            }}
             className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md border-b-2 border-green-600 font-medium"
           >
             <Plus size={20} />
@@ -245,8 +317,8 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
       {showForm && isAdmin && (
         <div className="bg-white rounded-lg shadow-lg p-6 border-t-4 border-red-600">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <Plus size={24} className="text-red-600" />
-            Yeni Bağış Ekle
+            {editingId ? <Edit2 size={24} className="text-red-600" /> : <Plus size={24} className="text-red-600" />}
+            {editingId ? 'Bağışı Düzenle' : 'Yeni Bağış Ekle'}
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -418,11 +490,14 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                 className="flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-lg hover:from-red-700 hover:to-red-800 disabled:bg-gray-400 transition-all shadow-md border-b-2 border-green-600 font-medium"
               >
                 <Gift size={20} />
-                {saving ? 'Kaydediliyor...' : 'Bağış Kaydet'}
+                {saving ? 'Kaydediliyor...' : (editingId ? 'Güncelle' : 'Bağış Kaydet')}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                }}
                 className="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors shadow-md font-medium"
               >
                 İptal
@@ -476,6 +551,11 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Açıklama
                   </th>
+                  {isAdmin && (
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      İşlemler
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -530,6 +610,28 @@ export function Donations({ currentMember, isAdmin }: DonationsProps) {
                         </div>
                       </div>
                     </td>
+                    {isAdmin && (
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(donation)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="Düzenle"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          {isRoot && (
+                            <button
+                              onClick={() => handleDelete(donation.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Sadece root kullanıcısı silebilir"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

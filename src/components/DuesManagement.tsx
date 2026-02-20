@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Dues, MemberDuesWithDetails, Member } from '../types';
-import { Plus, Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift, Users } from 'lucide-react';
 import { DebtTracking } from './DebtTracking';
 import { PaymentCollection } from './PaymentCollection';
 import { DebtEntry } from './DebtEntry';
@@ -10,15 +10,17 @@ import { Donations } from './Donations';
 interface DuesManagementProps {
   currentMember: Member;
   isAdmin: boolean;
+  isRoot?: boolean;
 }
 
-export function DuesManagement({ currentMember, isAdmin }: DuesManagementProps) {
+export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesManagementProps) {
   const [activeTab, setActiveTab] = useState<'dues' | 'debt' | 'payment' | 'debtentry' | 'donations'>('dues');
   const [dues, setDues] = useState<Dues[]>([]);
   const [myDues, setMyDues] = useState<MemberDuesWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingDues, setEditingDues] = useState<Dues | null>(null);
+  const [duesMembers, setDuesMembers] = useState<{ [key: string]: MemberDuesWithDetails[] }>({});
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
@@ -34,11 +36,43 @@ export function DuesManagement({ currentMember, isAdmin }: DuesManagementProps) 
   const loadData = async () => {
     try {
       if (isAdmin) {
-        const { data: duesData } = await supabase
+        // Tüm aidatları yükle
+        const { data: duesData, error: duesError } = await supabase
           .from('dues')
           .select('*')
           .order('period_year', { ascending: false });
+
+        if (duesError) {
+          console.error('Error loading dues:', duesError);
+          setLoading(false);
+          return;
+        }
+
         setDues(duesData || []);
+
+        // Tüm member_dues kayıtlarını tek sorguda çek
+        const { data: allMemberDues, error: memberDuesError } = await supabase
+          .from('member_dues')
+          .select('*, members(full_name, email, phone)')
+          .order('status', { ascending: false });
+
+        if (memberDuesError) {
+          console.error('Error loading member dues:', memberDuesError);
+          setLoading(false);
+          return;
+        }
+
+        // Üyeleri dues_id'ye göre grupla
+        if (allMemberDues) {
+          const membersMap: { [key: string]: MemberDuesWithDetails[] } = {};
+          allMemberDues.forEach((memberDue) => {
+            if (!membersMap[memberDue.dues_id]) {
+              membersMap[memberDue.dues_id] = [];
+            }
+            membersMap[memberDue.dues_id].push(memberDue);
+          });
+          setDuesMembers(membersMap);
+        }
       } else {
         const { data: myDuesData } = await supabase
           .from('member_dues')
@@ -107,6 +141,11 @@ export function DuesManagement({ currentMember, isAdmin }: DuesManagementProps) 
   };
 
   const handleDelete = async (id: string) => {
+    if (!isRoot) {
+      alert('Sadece root kullanıcısı aidat silebilir');
+      return;
+    }
+
     if (!confirm('Bu aidatı silmek istediğinizden emin misiniz?')) return;
 
     try {
@@ -370,48 +409,80 @@ export function DuesManagement({ currentMember, isAdmin }: DuesManagementProps) 
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Miktar</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönem</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Son Ödeme</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üye Sayısı</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üyeler</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {dues.map((duesItem) => (
-                    <tr key={duesItem.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{duesItem.title}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">₺{duesItem.amount.toFixed(2)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {duesItem.period_year} Yılı
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {new Date(duesItem.due_date).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleExportToExcel(duesItem.id)}
-                            className="text-green-600 hover:text-green-800 transition-colors"
-                            title="Excel'e Aktar"
-                          >
-                            <Download size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(duesItem)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(duesItem.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {dues.map((duesItem) => {
+                    const members = duesMembers[duesItem.id] || [];
+                    const memberNames = members.map(m => (m.members as any)?.full_name).filter(Boolean);
+
+                    return (
+                      <tr key={duesItem.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium">
+                          {duesItem.title}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">₺{duesItem.amount.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {duesItem.period_year} Yılı
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {new Date(duesItem.due_date).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                            <Users size={14} />
+                            {members.length}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="max-w-xs">
+                            {memberNames.length > 0 ? (
+                              <div className="text-sm text-gray-900">
+                                {memberNames.slice(0, 3).join(', ')}
+                                {memberNames.length > 3 && (
+                                  <span className="text-gray-500"> +{memberNames.length - 3} diğer</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-400">Henüz üye yok</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleExportToExcel(duesItem.id)}
+                              className="text-green-600 hover:text-green-800 transition-colors"
+                              title="Excel'e Aktar"
+                            >
+                              <Download size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(duesItem)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            {isRoot && (
+                              <button
+                                onClick={() => handleDelete(duesItem.id)}
+                                className="text-red-600 hover:text-red-800 transition-colors"
+                                title="Sadece root kullanıcısı silebilir"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {dues.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                         Henüz aidat bulunmuyor
                       </td>
                     </tr>
@@ -428,7 +499,7 @@ export function DuesManagement({ currentMember, isAdmin }: DuesManagementProps) 
 
         {activeTab === 'debtentry' && <DebtEntry />}
 
-        {activeTab === 'donations' && <Donations currentMember={currentMember} isAdmin={isAdmin} />}
+        {activeTab === 'donations' && <Donations currentMember={currentMember} isAdmin={isAdmin} isRoot={isRoot} />}
       </div>
     );
   }
