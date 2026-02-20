@@ -132,66 +132,66 @@ export function MemberDirectory() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Kayıt No</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ad Soyad</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">TC Kimlik No</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">E-Posta</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefon</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">İl/İlçe</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Durum</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">İşlem</th>
+                <th className="w-[7%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Kayıt No</th>
+                <th className="w-[15%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ad Soyad</th>
+                <th className="w-[10%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">TC Kimlik No</th>
+                <th className="w-[18%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">E-Posta</th>
+                <th className="w-[10%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Telefon</th>
+                <th className="w-[12%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">İl/İlçe</th>
+                <th className="w-[8%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Durum</th>
+                <th className="w-[12%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rol</th>
+                <th className="w-[8%] px-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-800">{member.registry_number || '-'}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-2 py-3 text-xs text-gray-800 truncate">{member.registry_number || '-'}</td>
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
                       {member.avatar_url ? (
                         <img
                           src={member.avatar_url}
                           alt={member.full_name}
-                          className="w-8 h-8 rounded-full object-cover"
+                          className="w-7 h-7 rounded-full object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold text-xs">
+                        <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-blue-700 font-bold text-xs flex-shrink-0">
                           {member.full_name.charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <span className="text-sm font-medium text-gray-800">{member.full_name}</span>
+                      <span className="text-xs font-medium text-gray-800 truncate">{member.full_name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{member.tc_identity_no || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{member.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{member.phone || '-'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td className="px-2 py-3 text-xs text-gray-600 truncate">{member.tc_identity_no || '-'}</td>
+                  <td className="px-2 py-3 text-xs text-gray-600 truncate" title={member.email}>{member.email}</td>
+                  <td className="px-2 py-3 text-xs text-gray-600 truncate">{member.phone || '-'}</td>
+                  <td className="px-2 py-3 text-xs text-gray-600 truncate">
                     {member.province && member.district
                       ? `${member.province}/${member.district}`
                       : member.province || '-'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-3">
                     {member.is_active !== false ? (
-                      <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                      <span className="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded whitespace-nowrap">
                         Aktif
                       </span>
                     ) : (
-                      <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded">
+                      <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded whitespace-nowrap">
                         Pasif
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-2 py-3">
                     {currentUser?.is_admin || currentUser?.is_root ? (
                       <select
                         value={member.is_root ? 'root' : member.is_admin ? 'admin' : 'member'}
                         onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'admin' | 'root')}
                         disabled={member.id === currentUser?.id || (member.is_root && !currentUser?.is_root)}
-                        className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        className="text-xs px-1.5 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed w-full"
                       >
                         <option value="member">Üye</option>
                         <option value="admin">Yönetici</option>
@@ -201,31 +201,31 @@ export function MemberDirectory() {
                       <span className="inline-flex items-center gap-1 text-xs">
                         {member.is_root ? (
                           <>
-                            <Crown size={14} className="text-yellow-600" />
-                            <span className="text-yellow-700 font-semibold">Root</span>
+                            <Crown size={12} className="text-yellow-600 flex-shrink-0" />
+                            <span className="text-yellow-700 font-semibold truncate">Root</span>
                           </>
                         ) : member.is_admin ? (
                           <>
-                            <Shield size={14} className="text-blue-600" />
-                            <span className="text-blue-700 font-semibold">Yönetici</span>
+                            <Shield size={12} className="text-blue-600 flex-shrink-0" />
+                            <span className="text-blue-700 font-semibold truncate">Yönetici</span>
                           </>
                         ) : (
                           <>
-                            <User size={14} className="text-gray-600" />
-                            <span className="text-gray-700">Üye</span>
+                            <User size={12} className="text-gray-600 flex-shrink-0" />
+                            <span className="text-gray-700 truncate">Üye</span>
                           </>
                         )}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                  <td className="px-2 py-3">
+                    <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => setSelectedMember(member)}
                         className="text-blue-600 hover:text-blue-700 transition-colors"
                         title="Detayları Görüntüle"
                       >
-                        <Eye size={18} />
+                        <Eye size={16} />
                       </button>
                       {(currentUser?.is_admin || currentUser?.is_root) && member.id !== currentUser?.id && (
                         <button
@@ -233,7 +233,7 @@ export function MemberDirectory() {
                           className="text-red-400 hover:text-red-600 transition-colors"
                           title="Üyeyi Sil"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       )}
                     </div>

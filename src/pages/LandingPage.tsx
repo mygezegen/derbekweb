@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle, Youtube, Instagram, Facebook, LogIn } from 'lucide-react';
+import { Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users, MessageCircle, Youtube, Instagram, Facebook, LogIn, Landmark, CreditCard, Copy, Check } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
 import { GalleryModal } from '../components/GalleryModal';
-import { GalleryImage } from '../types';
+import { GalleryImage, BankAccount } from '../types';
 
 interface Announcement {
   id: string;
@@ -49,6 +49,7 @@ interface ContactInfo {
     youtube?: string;
     instagram?: string;
   };
+  bank_accounts?: BankAccount[];
 }
 
 export default function LandingPage() {
@@ -61,6 +62,14 @@ export default function LandingPage() {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<GalleryImage | null>(null);
   const [selectedGalleryImages, setSelectedGalleryImages] = useState<GalleryImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [copiedIban, setCopiedIban] = useState<string | null>(null);
+
+  const handleCopyIban = (iban: string) => {
+    navigator.clipboard.writeText(iban).then(() => {
+      setCopiedIban(iban);
+      setTimeout(() => setCopiedIban(null), 2000);
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -175,83 +184,95 @@ export default function LandingPage() {
       </div>
 
       <div className="container mx-auto px-4 py-12 max-w-7xl">
+
+        <section className="mb-10">
+          <div className="bg-gradient-to-r from-emerald-600 to-green-700 rounded-2xl shadow-xl overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center gap-6 px-8 py-8">
+              <div className="flex-shrink-0 bg-white/20 rounded-full p-5">
+                <Users className="w-12 h-12 text-white" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-2xl font-bold text-white mb-1">Üye Olmak İster misiniz?</h3>
+                <p className="text-emerald-100 text-base">
+                  Derneğimize katılarak köyümüzün ve hemşehrilerimizin kalkınmasına katkıda bulunabilirsiniz.
+                </p>
+              </div>
+              <div className="flex-shrink-0">
+                <button
+                  onClick={() => navigate('/app')}
+                  className="inline-flex items-center gap-2 bg-white text-emerald-700 px-7 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-emerald-50 transform hover:scale-105 transition-all duration-200 whitespace-nowrap"
+                >
+                  <span>Üye İşlemleri</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="mb-16">
           <div className="flex items-center justify-center mb-8">
             <Mail className="w-8 h-8 text-emerald-600 mr-3" />
             <h2 className="text-3xl font-bold text-gray-800">İletişim</h2>
           </div>
-          <div className="bg-white rounded-xl shadow-lg p-8 md:p-12">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="text-2xl font-semibold text-gray-800 mb-6">
+          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div className="grid lg:grid-cols-3 gap-0">
+              <div className="lg:col-span-1 bg-gradient-to-br from-emerald-600 to-green-700 p-8 text-white">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <Phone className="w-5 h-5" />
                   Bize Ulaşın
                 </h3>
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-emerald-100 p-3 rounded-lg">
-                      <MapPin className="w-6 h-6 text-emerald-600" />
+                <div className="space-y-5">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white/20 p-2.5 rounded-lg flex-shrink-0">
+                      <MapPin className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">Adres</h4>
-                      <p className="text-gray-600">
+                      <p className="text-emerald-100 text-xs uppercase font-semibold tracking-wider mb-1">Adres</p>
+                      <p className="text-white text-sm leading-relaxed">
                         {contactInfo?.address || 'Çaybaşı Köyü, Çüngüş, Diyarbakır'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-rose-100 p-3 rounded-lg">
-                      <Phone className="w-6 h-6 text-rose-600" />
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white/20 p-2.5 rounded-lg flex-shrink-0">
+                      <Phone className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">Telefon</h4>
-                      <p className="text-gray-600">{contactInfo?.phone || '+90 XXX XXX XX XX'}</p>
+                      <p className="text-emerald-100 text-xs uppercase font-semibold tracking-wider mb-1">Telefon</p>
+                      <p className="text-white text-sm">{contactInfo?.phone || '+90 XXX XXX XX XX'}</p>
                     </div>
                   </div>
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-amber-100 p-3 rounded-lg">
-                      <Mail className="w-6 h-6 text-amber-600" />
+                  <div className="flex items-start gap-4">
+                    <div className="bg-white/20 p-2.5 rounded-lg flex-shrink-0">
+                      <Mail className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-gray-800 mb-1">E-posta</h4>
-                      <p className="text-gray-600">{contactInfo?.email || 'info@caybasi.org'}</p>
+                      <p className="text-emerald-100 text-xs uppercase font-semibold tracking-wider mb-1">E-posta</p>
+                      <p className="text-white text-sm break-all">{contactInfo?.email || 'info@caybasi.org'}</p>
                     </div>
                   </div>
 
                   {contactInfo?.social_media && (contactInfo.social_media.youtube || contactInfo.social_media.instagram || contactInfo.social_media.facebook) && (
-                    <div className="pt-6 border-t border-gray-200">
-                      <h4 className="font-semibold text-gray-800 mb-4">Sosyal Medya</h4>
-                      <div className="flex items-center gap-4">
+                    <div className="pt-5 border-t border-white/20">
+                      <p className="text-emerald-100 text-xs uppercase font-semibold tracking-wider mb-3">Sosyal Medya</p>
+                      <div className="flex items-center gap-3">
                         {contactInfo.social_media.youtube && (
-                          <a
-                            href={contactInfo.social_media.youtube}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-red-100 p-3 rounded-lg hover:bg-red-200 transition-colors group"
-                            title="YouTube"
-                          >
-                            <Youtube className="w-6 h-6 text-red-600 group-hover:scale-110 transition-transform" />
+                          <a href={contactInfo.social_media.youtube} target="_blank" rel="noopener noreferrer"
+                            className="bg-white/20 p-2.5 rounded-lg hover:bg-white/30 transition-colors group" title="YouTube">
+                            <Youtube className="w-5 h-5 text-white" />
                           </a>
                         )}
                         {contactInfo.social_media.instagram && (
-                          <a
-                            href={contactInfo.social_media.instagram}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-pink-100 p-3 rounded-lg hover:bg-pink-200 transition-colors group"
-                            title="Instagram"
-                          >
-                            <Instagram className="w-6 h-6 text-pink-600 group-hover:scale-110 transition-transform" />
+                          <a href={contactInfo.social_media.instagram} target="_blank" rel="noopener noreferrer"
+                            className="bg-white/20 p-2.5 rounded-lg hover:bg-white/30 transition-colors group" title="Instagram">
+                            <Instagram className="w-5 h-5 text-white" />
                           </a>
                         )}
                         {contactInfo.social_media.facebook && (
-                          <a
-                            href={contactInfo.social_media.facebook}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-blue-100 p-3 rounded-lg hover:bg-blue-200 transition-colors group"
-                            title="Facebook"
-                          >
-                            <Facebook className="w-6 h-6 text-blue-600 group-hover:scale-110 transition-transform" />
+                          <a href={contactInfo.social_media.facebook} target="_blank" rel="noopener noreferrer"
+                            className="bg-white/20 p-2.5 rounded-lg hover:bg-white/30 transition-colors group" title="Facebook">
+                            <Facebook className="w-5 h-5 text-white" />
                           </a>
                         )}
                       </div>
@@ -259,21 +280,56 @@ export default function LandingPage() {
                   )}
                 </div>
               </div>
-              <div className="bg-gradient-to-br from-emerald-50 to-amber-50 rounded-lg p-8 flex flex-col justify-center items-center text-center">
-                <Users className="w-16 h-16 text-emerald-600 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">
-                  Üye Olmak İster misiniz?
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Derneğimize katılarak köyümüzün ve hemşehrilerimizin kalkınmasına katkıda bulunabilirsiniz.
-                </p>
-                <button
-                  onClick={() => navigate('/app')}
-                  className="inline-flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-green-600 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-green-700 transform hover:scale-105 transition-all duration-200"
-                >
-                  <span>Üye İşlemleri</span>
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+
+              <div className="lg:col-span-2 p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="bg-emerald-100 p-2.5 rounded-lg">
+                    <Landmark className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-800">Banka Hesap Bilgileri</h3>
+                    <p className="text-sm text-gray-500">Aidat ve bağış ödemeleriniz için</p>
+                  </div>
+                </div>
+
+                {contactInfo?.bank_accounts && contactInfo.bank_accounts.length > 0 ? (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {contactInfo.bank_accounts.map((acc, idx) => (
+                      <div key={idx} className="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow bg-gradient-to-br from-gray-50 to-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-emerald-600" />
+                            <span className="font-bold text-gray-800">{acc.bank_name}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-1">Hesap Sahibi</p>
+                        <p className="text-sm font-semibold text-gray-700 mb-3">{acc.account_holder}</p>
+                        <p className="text-xs text-gray-500 mb-1">IBAN</p>
+                        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                          <span className="text-sm font-mono text-gray-800 flex-1 break-all leading-relaxed">{acc.iban}</span>
+                          <button
+                            onClick={() => handleCopyIban(acc.iban)}
+                            className="flex-shrink-0 text-gray-400 hover:text-emerald-600 transition-colors"
+                            title="IBAN kopyala"
+                          >
+                            {copiedIban === acc.iban ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        {acc.account_no && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-500 mb-1">Hesap No</p>
+                            <p className="text-sm text-gray-700">{acc.account_no}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center text-gray-400">
+                    <Landmark className="w-12 h-12 mb-3 opacity-30" />
+                    <p className="text-sm">Banka hesabı bilgisi henüz eklenmemiştir.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

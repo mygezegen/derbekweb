@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ContactInfo, ManagementInfo, Member } from '../types';
-import { Phone, Mail, MapPin, Edit2, Save, X, Users as UsersIcon, Plus, Trash2, Youtube, Instagram, Facebook } from 'lucide-react';
+import { ContactInfo, ManagementInfo, Member, BankAccount } from '../types';
+import { Phone, Mail, MapPin, Edit2, Save, X, Users as UsersIcon, Plus, Trash2, Youtube, Instagram, Facebook, Landmark, CreditCard } from 'lucide-react';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
 
@@ -76,6 +76,7 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
           email: editedContact.email,
           address: editedContact.address,
           social_media: editedContact.social_media,
+          bank_accounts: editedContact.bank_accounts || [],
         })
         .eq('id', contactInfo.id);
 
@@ -308,6 +309,103 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
               </div>
             </div>
 
+            <div className="border-t pt-4 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">Banka Hesap Bilgileri</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const accounts = editedContact.bank_accounts || [];
+                    setEditedContact({
+                      ...editedContact,
+                      bank_accounts: [...accounts, { bank_name: '', iban: '', account_holder: '', account_no: '' }]
+                    });
+                  }}
+                  className="flex items-center gap-1 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus size={15} />
+                  Hesap Ekle
+                </button>
+              </div>
+              {(editedContact.bank_accounts || []).length === 0 && (
+                <p className="text-sm text-gray-500 italic">Henüz banka hesabı eklenmedi.</p>
+              )}
+              <div className="space-y-4">
+                {(editedContact.bank_accounts || []).map((acc, idx) => (
+                  <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50 relative">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = (editedContact.bank_accounts || []).filter((_, i) => i !== idx);
+                        setEditedContact({ ...editedContact, bank_accounts: updated });
+                      }}
+                      className="absolute top-3 right-3 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Banka Adı</label>
+                        <input
+                          type="text"
+                          value={acc.bank_name}
+                          onChange={(e) => {
+                            const updated = [...(editedContact.bank_accounts || [])];
+                            updated[idx] = { ...updated[idx], bank_name: e.target.value };
+                            setEditedContact({ ...editedContact, bank_accounts: updated });
+                          }}
+                          placeholder="Ziraat Bankası"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Hesap Sahibi</label>
+                        <input
+                          type="text"
+                          value={acc.account_holder}
+                          onChange={(e) => {
+                            const updated = [...(editedContact.bank_accounts || [])];
+                            updated[idx] = { ...updated[idx], account_holder: e.target.value };
+                            setEditedContact({ ...editedContact, bank_accounts: updated });
+                          }}
+                          placeholder="Dernek Adı"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">IBAN</label>
+                        <input
+                          type="text"
+                          value={acc.iban}
+                          onChange={(e) => {
+                            const updated = [...(editedContact.bank_accounts || [])];
+                            updated[idx] = { ...updated[idx], iban: e.target.value };
+                            setEditedContact({ ...editedContact, bank_accounts: updated });
+                          }}
+                          placeholder="TR00 0000 0000 0000 0000 0000 00"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Hesap No (Opsiyonel)</label>
+                        <input
+                          type="text"
+                          value={acc.account_no || ''}
+                          onChange={(e) => {
+                            const updated = [...(editedContact.bank_accounts || [])];
+                            updated[idx] = { ...updated[idx], account_no: e.target.value };
+                            setEditedContact({ ...editedContact, bank_accounts: updated });
+                          }}
+                          placeholder="Hesap numarası"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 onClick={handleSave}
@@ -384,6 +482,30 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
                     <Facebook size={28} />
                   </a>
                 )}
+              </div>
+            )}
+
+            {contactInfo?.bank_accounts && contactInfo.bank_accounts.length > 0 && (
+              <div className="pt-4 border-t mt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Landmark size={20} className="text-blue-600" />
+                  <h3 className="text-lg font-semibold text-gray-800">Banka Hesap Bilgileri</h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {contactInfo.bank_accounts.map((acc, idx) => (
+                    <div key={idx} className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CreditCard size={16} className="text-blue-600" />
+                        <span className="font-semibold text-blue-800">{acc.bank_name}</span>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-1"><span className="font-medium">Hesap Sahibi:</span> {acc.account_holder}</p>
+                      <p className="text-sm font-mono text-gray-800 bg-white px-3 py-1.5 rounded border border-blue-200 break-all">{acc.iban}</p>
+                      {acc.account_no && (
+                        <p className="text-sm text-gray-600 mt-1"><span className="font-medium">Hesap No:</span> {acc.account_no}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

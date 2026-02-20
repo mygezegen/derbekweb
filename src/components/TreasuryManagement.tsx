@@ -109,8 +109,6 @@ export function TreasuryManagement({ isRoot = false }: TreasuryManagementProps) 
 
     if (error) {
       console.error('Error loading transactions:', error);
-    } else {
-      console.log('Loaded transactions:', data);
     }
 
     return data || [];

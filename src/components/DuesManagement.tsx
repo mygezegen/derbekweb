@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Dues, MemberDuesWithDetails, Member } from '../types';
-import { Plus, Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift, Users, Search, Save } from 'lucide-react';
 import { DebtTracking } from './DebtTracking';
 import { PaymentCollection } from './PaymentCollection';
 import { DebtEntry } from './DebtEntry';
@@ -21,6 +21,10 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
   const [showForm, setShowForm] = useState(false);
   const [editingDues, setEditingDues] = useState<Dues | null>(null);
   const [duesMembers, setDuesMembers] = useState<{ [key: string]: MemberDuesWithDetails[] }>({});
+  const [allMemberDuesList, setAllMemberDuesList] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [expandedDues, setExpandedDues] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState<{ memberDuesId: string; amount: string } | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     amount: '',
@@ -53,7 +57,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
         // Tüm member_dues kayıtlarını tek sorguda çek
         const { data: allMemberDues, error: memberDuesError } = await supabase
           .from('member_dues')
-          .select('*, members(full_name, email, phone)')
+          .select('*, members(full_name, email, phone, tc_identity_no), dues(title, amount)')
           .order('status', { ascending: false });
 
         if (memberDuesError) {
@@ -61,6 +65,9 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
           setLoading(false);
           return;
         }
+
+        // Tüm listeyi sakla (arama için)
+        setAllMemberDuesList(allMemberDues || []);
 
         // Üyeleri dues_id'ye göre grupla
         if (allMemberDues) {
@@ -154,6 +161,33 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
     } catch (error) {
       console.error('Error deleting dues:', error);
       alert('Aidat silinirken hata oluştu');
+    }
+  };
+
+  const handleUpdateAmount = async (memberDuesId: string, newAmount: string) => {
+    try {
+      const amount = parseFloat(newAmount);
+      if (isNaN(amount) || amount < 0) {
+        alert('Geçerli bir tutar giriniz');
+        return;
+      }
+
+      const memberDue = allMemberDuesList.find(m => m.id === memberDuesId);
+      if (!memberDue) throw new Error('Kayıt bulunamadı');
+
+      const { error } = await supabase
+        .from('dues')
+        .update({ amount: amount })
+        .eq('id', memberDue.dues_id);
+
+      if (error) throw error;
+
+      setEditingAmount(null);
+      loadData();
+      alert('Tutar başarıyla güncellendi');
+    } catch (error) {
+      console.error('Error updating amount:', error);
+      alert('Tutar güncellenirken hata oluştu');
     }
   };
 
@@ -402,93 +436,311 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
             )}
 
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Başlık</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Miktar</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönem</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Son Ödeme</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üye Sayısı</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üyeler</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlemler</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {dues.map((duesItem) => {
-                    const members = duesMembers[duesItem.id] || [];
-                    const memberNames = members.map(m => (m.members as any)?.full_name).filter(Boolean);
+              <div className="p-4 border-b border-gray-200">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Üye adı veya TC Kimlik No ile ara..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
 
-                    return (
-                      <tr key={duesItem.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap font-medium">
-                          {duesItem.title}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">₺{duesItem.amount.toFixed(2)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {duesItem.period_year} Yılı
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {new Date(duesItem.due_date).toLocaleDateString('tr-TR')}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                            <Users size={14} />
-                            {members.length}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="max-w-xs">
-                            {memberNames.length > 0 ? (
-                              <div className="text-sm text-gray-900">
-                                {memberNames.slice(0, 3).join(', ')}
-                                {memberNames.length > 3 && (
-                                  <span className="text-gray-500"> +{memberNames.length - 3} diğer</span>
+              {searchQuery ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Aidat</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Ad Soyad</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">TC Kimlik No</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Email</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Telefon</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Aidat Tutarı</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Ödenen</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Kalan Borç</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">Durum</th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-600">İşlem</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {(() => {
+                        const query = searchQuery.toLowerCase().trim();
+                        const filtered = allMemberDuesList.filter(m => {
+                          const memberName = (m.members?.full_name || '').toLowerCase();
+                          const tcNo = (m.members?.tc_identity_no || '').toString();
+                          const email = (m.members?.email || '').toLowerCase();
+                          const phone = (m.members?.phone || '').toString();
+                          return memberName.includes(query) || tcNo.includes(query) || email.includes(query) || phone.includes(query);
+                        });
+
+                        if (filtered.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                                Arama sonucu bulunamadı
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return filtered.map((memberDue) => {
+                          const member = memberDue.members;
+                          const duesInfo = memberDue.dues;
+                          const dueAmount = memberDue.amount || duesInfo?.amount || 0;
+                          const paidAmount = memberDue.paid_amount || 0;
+                          const remaining = dueAmount - paidAmount;
+                          const isEditing = editingAmount?.memberDuesId === memberDue.id;
+
+                          return (
+                            <tr key={memberDue.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 font-medium text-gray-900">{duesInfo?.title || '-'}</td>
+                              <td className="px-4 py-2 font-medium text-gray-900">{member?.full_name || '-'}</td>
+                              <td className="px-4 py-2 text-gray-600">{member?.tc_identity_no || '-'}</td>
+                              <td className="px-4 py-2 text-gray-600">{member?.email || '-'}</td>
+                              <td className="px-4 py-2 text-gray-600">{member?.phone || '-'}</td>
+                              <td className="px-4 py-2">
+                                {isEditing ? (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={editingAmount.amount}
+                                      onChange={(e) => setEditingAmount({ ...editingAmount, amount: e.target.value })}
+                                      className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <button
+                                      onClick={() => handleUpdateAmount(memberDue.id, editingAmount.amount)}
+                                      className="text-green-600 hover:text-green-800"
+                                      title="Kaydet"
+                                    >
+                                      <Save size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingAmount(null)}
+                                      className="text-gray-600 hover:text-gray-800"
+                                      title="İptal"
+                                    >
+                                      <X size={16} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="font-medium">₺{dueAmount.toFixed(2)}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2 text-green-600 font-medium">₺{paidAmount.toFixed(2)}</td>
+                              <td className="px-4 py-2 text-red-600 font-medium">₺{remaining.toFixed(2)}</td>
+                              <td className="px-4 py-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                  memberDue.status === 'paid'
+                                    ? 'bg-green-100 text-green-800'
+                                    : memberDue.status === 'overdue'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {memberDue.status === 'paid' ? 'Ödendi' : memberDue.status === 'overdue' ? 'Gecikmiş' : 'Bekliyor'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2">
+                                {!isEditing && (
+                                  <button
+                                    onClick={() => setEditingAmount({ memberDuesId: memberDue.id, amount: dueAmount.toString() })}
+                                    className="text-blue-600 hover:text-blue-800"
+                                    title="Tutarı Düzenle"
+                                  >
+                                    <Edit2 size={16} />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Başlık</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Miktar</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dönem</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Son Ödeme</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlemler</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {dues.map((duesItem) => {
+                      const members = duesMembers[duesItem.id] || [];
+                      const isExpanded = expandedDues === duesItem.id;
+
+                      return (
+                        <>
+                          <tr key={duesItem.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 font-medium">
+                              <button
+                                onClick={() => setExpandedDues(isExpanded ? null : duesItem.id)}
+                                className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                              >
+                                {duesItem.title}
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                  <Users size={12} />
+                                  {members.length}
+                                </span>
+                              </button>
+                            </td>
+                            <td className="px-6 py-4">₺{duesItem.amount.toFixed(2)}</td>
+                            <td className="px-6 py-4">
+                              {duesItem.period_year} Yılı
+                            </td>
+                            <td className="px-6 py-4">
+                              {new Date(duesItem.due_date).toLocaleDateString('tr-TR')}
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleExportToExcel(duesItem.id)}
+                                  className="text-green-600 hover:text-green-800 transition-colors"
+                                  title="Excel'e Aktar"
+                                >
+                                  <Download size={18} />
+                                </button>
+                                <button
+                                  onClick={() => handleEdit(duesItem)}
+                                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  <Edit2 size={18} />
+                                </button>
+                                {isRoot && (
+                                  <button
+                                    onClick={() => handleDelete(duesItem.id)}
+                                    className="text-red-600 hover:text-red-800 transition-colors"
+                                    title="Sadece root kullanıcısı silebilir"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-sm text-gray-400">Henüz üye yok</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleExportToExcel(duesItem.id)}
-                              className="text-green-600 hover:text-green-800 transition-colors"
-                              title="Excel'e Aktar"
-                            >
-                              <Download size={18} />
-                            </button>
-                            <button
-                              onClick={() => handleEdit(duesItem)}
-                              className="text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              <Edit2 size={18} />
-                            </button>
-                            {isRoot && (
-                              <button
-                                onClick={() => handleDelete(duesItem.id)}
-                                className="text-red-600 hover:text-red-800 transition-colors"
-                                title="Sadece root kullanıcısı silebilir"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            )}
-                          </div>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-4 bg-gray-50">
+                                {members.length > 0 ? (
+                                  <div className="space-y-2">
+                                    <h4 className="font-semibold text-gray-700 mb-3">Üyeler ve Borç Durumu</h4>
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm">
+                                        <thead className="bg-gray-100">
+                                          <tr>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Ad Soyad</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">TC Kimlik No</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Email</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Telefon</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Aidat Tutarı</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Ödenen</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Kalan Borç</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">Durum</th>
+                                            <th className="px-4 py-2 text-left font-medium text-gray-600">İşlem</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                          {members.map((memberDue) => {
+                                            const member = memberDue.members as any;
+                                            const dueAmount = memberDue.amount || duesItem.amount;
+                                            const paidAmount = memberDue.paid_amount || 0;
+                                            const remaining = dueAmount - paidAmount;
+                                            const isEditing = editingAmount?.memberDuesId === memberDue.id;
+
+                                            return (
+                                              <tr key={memberDue.id} className="hover:bg-white">
+                                                <td className="px-4 py-2 font-medium text-gray-900">{member?.full_name || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-600">{member?.tc_identity_no || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-600">{member?.email || '-'}</td>
+                                                <td className="px-4 py-2 text-gray-600">{member?.phone || '-'}</td>
+                                                <td className="px-4 py-2">
+                                                  {isEditing ? (
+                                                    <div className="flex items-center gap-2">
+                                                      <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={editingAmount.amount}
+                                                        onChange={(e) => setEditingAmount({ ...editingAmount, amount: e.target.value })}
+                                                        className="w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                      />
+                                                      <button
+                                                        onClick={() => handleUpdateAmount(memberDue.id, editingAmount.amount)}
+                                                        className="text-green-600 hover:text-green-800"
+                                                        title="Kaydet"
+                                                      >
+                                                        <Save size={16} />
+                                                      </button>
+                                                      <button
+                                                        onClick={() => setEditingAmount(null)}
+                                                        className="text-gray-600 hover:text-gray-800"
+                                                        title="İptal"
+                                                      >
+                                                        <X size={16} />
+                                                      </button>
+                                                    </div>
+                                                  ) : (
+                                                    <span className="font-medium">₺{dueAmount.toFixed(2)}</span>
+                                                  )}
+                                                </td>
+                                                <td className="px-4 py-2 text-green-600 font-medium">₺{paidAmount.toFixed(2)}</td>
+                                                <td className="px-4 py-2 text-red-600 font-medium">₺{remaining.toFixed(2)}</td>
+                                                <td className="px-4 py-2">
+                                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                    memberDue.status === 'paid'
+                                                      ? 'bg-green-100 text-green-800'
+                                                      : memberDue.status === 'overdue'
+                                                      ? 'bg-red-100 text-red-800'
+                                                      : 'bg-yellow-100 text-yellow-800'
+                                                  }`}>
+                                                    {memberDue.status === 'paid' ? 'Ödendi' : memberDue.status === 'overdue' ? 'Gecikmiş' : 'Bekliyor'}
+                                                  </span>
+                                                </td>
+                                                <td className="px-4 py-2">
+                                                  {!isEditing && (
+                                                    <button
+                                                      onClick={() => setEditingAmount({ memberDuesId: memberDue.id, amount: dueAmount.toString() })}
+                                                      className="text-blue-600 hover:text-blue-800"
+                                                      title="Tutarı Düzenle"
+                                                    >
+                                                      <Edit2 size={16} />
+                                                    </button>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-500 text-center py-4">Henüz üye yok</p>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })}
+                    {dues.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                          Henüz aidat bulunmuyor
                         </td>
                       </tr>
-                    );
-                  })}
-                  {dues.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                        Henüz aidat bulunmuyor
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}

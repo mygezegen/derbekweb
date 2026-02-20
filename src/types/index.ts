@@ -165,12 +165,20 @@ export interface AuditLog {
   created_at: string;
 }
 
+export interface BankAccount {
+  bank_name: string;
+  iban: string;
+  account_holder: string;
+  account_no?: string;
+}
+
 export interface ContactInfo {
   id: string;
   phone?: string;
   email?: string;
   address?: string;
   social_media?: Record<string, string>;
+  bank_accounts?: BankAccount[];
   updated_by?: string;
   created_at: string;
   updated_at: string;
