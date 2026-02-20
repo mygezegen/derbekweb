@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Search, Eye, X, Shield, User, Crown } from 'lucide-react';
+import { Search, Eye, X, Shield, User, Crown, Pencil, Trash2 } from 'lucide-react';
+import { MemberEditModal } from './MemberEditModal';
 
 export function MemberDirectory() {
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
 
   useEffect(() => {
@@ -74,6 +76,25 @@ export function MemberDirectory() {
     } catch (error) {
       console.error('Error updating role:', error);
       alert('Rol güncellenirken bir hata oluştu.');
+    }
+  };
+
+  const handleDeleteMember = async (member: Member) => {
+    if (!confirm(`"${member.full_name}" adlı üyeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', member.id);
+
+      if (error) throw error;
+
+      setSelectedMember(null);
+      loadMembers();
+    } catch (err) {
+      console.error('Error deleting member:', err);
+      alert('Üye silinirken bir hata oluştu.');
     }
   };
 
@@ -198,13 +219,24 @@ export function MemberDirectory() {
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setSelectedMember(member)}
-                      className="text-blue-600 hover:text-blue-700"
-                      title="Detayları Görüntüle"
-                    >
-                      <Eye size={18} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedMember(member)}
+                        className="text-blue-600 hover:text-blue-700 transition-colors"
+                        title="Detayları Görüntüle"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      {(currentUser?.is_admin || currentUser?.is_root) && member.id !== currentUser?.id && (
+                        <button
+                          onClick={() => handleDeleteMember(member)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Üyeyi Sil"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -228,12 +260,37 @@ export function MemberDirectory() {
           <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <h3 className="text-xl font-bold text-gray-800">Üye Detayları</h3>
-              <button
-                onClick={() => setSelectedMember(null)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={24} />
-              </button>
+              <div className="flex items-center gap-2">
+                {(currentUser?.is_admin || currentUser?.is_root) && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setEditingMember(selectedMember);
+                        setSelectedMember(null);
+                      }}
+                      className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                    >
+                      <Pencil size={15} />
+                      Düzenle
+                    </button>
+                    {selectedMember.id !== currentUser?.id && (
+                      <button
+                        onClick={() => handleDeleteMember(selectedMember)}
+                        className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium shadow-sm"
+                      >
+                        <Trash2 size={15} />
+                        Sil
+                      </button>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => setSelectedMember(null)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 space-y-6">
@@ -279,11 +336,24 @@ export function MemberDirectory() {
                 <InfoField label="Pasif Olma Tarihi" value={selectedMember.passive_status_date} />
                 <InfoField label="Pasif Olma Nedeni" value={selectedMember.passive_status_reason} className="md:col-span-2" />
                 <InfoField label="Pasif İtiraz Tarihi" value={selectedMember.passive_objection_date} />
+                <InfoField label="Baba Adı" value={selectedMember.father_name} />
+                <InfoField label="Ana Adı" value={selectedMember.mother_name} />
                 <InfoField label="Kayıt Tarihi (Sistem)" value={new Date(selectedMember.joined_at).toLocaleDateString('tr-TR')} />
               </div>
             </div>
           </div>
         </div>
+      )}
+
+      {editingMember && (
+        <MemberEditModal
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSaved={() => {
+            setEditingMember(null);
+            loadMembers();
+          }}
+        />
       )}
     </>
   );

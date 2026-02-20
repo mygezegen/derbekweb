@@ -36,6 +36,8 @@ export interface Member {
   passive_status_reason?: string;
   passive_objection_date?: string;
   is_active?: boolean;
+  mother_name?: string;
+  father_name?: string;
 }
 
 export interface Announcement {

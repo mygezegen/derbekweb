@@ -49,9 +49,9 @@ export function BulkOperations() {
     let filename = '';
 
     if (type === 'debt') {
-      csv = 'email,başlık,tutar,tarih,açıklama\n';
-      csv += 'ornek@email.com,2025 Yıllık Aidat,500,2025-12-31,Yıllık aidat ödemesi\n';
-      csv += 'uye2@email.com,Olağanüstü Aidat,200,2025-06-30,Onarım için ek aidat\n';
+      csv = 'tckn,başlık,tutar,tarih,açıklama\n';
+      csv += '12345678901,2025 Yıllık Aidat,500,2025-12-31,Yıllık aidat ödemesi\n';
+      csv += '23456789012,Olağanüstü Aidat,200,2025-06-30,Onarım için ek aidat\n';
       filename = 'borç_yükleme_şablonu.csv';
     } else if (type === 'payment') {
       csv = 'email,tutar\n';
@@ -93,13 +93,23 @@ export function BulkOperations() {
       const headers = rows[0];
       const data = rows.slice(1);
 
-      const emailIndex = headers.findIndex(h => h.toLowerCase().includes('email') || h.toLowerCase().includes('e-posta'));
-      const titleIndex = headers.findIndex(h => h.toLowerCase().includes('başlık') || h.toLowerCase().includes('title'));
-      const amountIndex = headers.findIndex(h => h.toLowerCase().includes('tutar') || h.toLowerCase().includes('amount'));
-      const dateIndex = headers.findIndex(h => h.toLowerCase().includes('tarih') || h.toLowerCase().includes('date'));
+      const trMap: Record<string, string> = {'ı':'i','İ':'i','I':'i','ğ':'g','Ğ':'g','ü':'u','Ü':'u','ş':'s','Ş':'s','ö':'o','Ö':'o','ç':'c','Ç':'c'};
+      const normalize = (s: string) => s
+        .replace(/^\uFEFF/, '')
+        .replace(/[ıİIğĞüÜşŞöÖçÇ]/g, c => trMap[c] || c)
+        .toLowerCase()
+        .trim();
+      const tcknIndex = headers.findIndex(h => { const n = normalize(h); return n.includes('tckn') || n.includes('tc_no') || n.includes('tc no') || n === 'tc'; });
+      const titleIndex = headers.findIndex(h => { const n = normalize(h); return n.includes('baslik') || n.includes('title') || n.includes('aciklama') || n.includes('borc'); });
+      const amountIndex = headers.findIndex(h => { const n = normalize(h); return n.includes('tutar') || n.includes('amount') || n.includes('miktar'); });
+      const dateIndex = headers.findIndex(h => { const n = normalize(h); return n.includes('tarih') || n.includes('date') || n.includes('son_tarih'); });
 
-      if (emailIndex === -1 || titleIndex === -1 || amountIndex === -1) {
-        throw new Error('CSV dosyasında gerekli sütunlar bulunamadı (email, başlık, tutar)');
+      if (tcknIndex === -1 || titleIndex === -1 || amountIndex === -1) {
+        const missing = [];
+        if (tcknIndex === -1) missing.push('tckn');
+        if (titleIndex === -1) missing.push('baslik');
+        if (amountIndex === -1) missing.push('tutar');
+        throw new Error(`CSV'de şu sütunlar bulunamadı: ${missing.join(', ')}. Dosyadaki sütunlar: ${headers.map(h => `"${h}"`).join(', ')}`);
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -117,19 +127,27 @@ export function BulkOperations() {
 
       for (const row of data) {
         try {
-          const email = row[emailIndex];
-          const title = row[titleIndex];
-          const amount = parseFloat(row[amountIndex]);
-          const dueDate = dateIndex !== -1 ? row[dateIndex] : new Date().toISOString().split('T')[0];
+          const tckn = row[tcknIndex]?.trim();
+          const title = row[titleIndex]?.trim();
+          const amount = parseFloat(row[amountIndex]?.trim());
+          const rawDate = dateIndex !== -1 ? row[dateIndex]?.trim() : '';
+          const isValidDate = rawDate && /^\d{4}-\d{2}-\d{2}/.test(rawDate);
+          const dueDate = isValidDate ? rawDate : new Date().toISOString().split('T')[0];
+
+          if (!tckn) {
+            errors.push(`Boş TCKN - Satır atlandı`);
+            failCount++;
+            continue;
+          }
 
           const { data: member } = await supabase
             .from('members')
             .select('id')
-            .eq('email', email)
+            .eq('tc_identity_no', tckn)
             .maybeSingle();
 
           if (!member) {
-            errors.push(`${email} - Üye bulunamadı`);
+            errors.push(`${tckn} - Üye bulunamadı`);
             failCount++;
             continue;
           }
@@ -165,14 +183,15 @@ export function BulkOperations() {
           successCount++;
         } catch (err) {
           failCount++;
-          errors.push(`Satır hatası: ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
+          const msg = (err as any)?.message || (err instanceof Error ? err.message : JSON.stringify(err));
+          errors.push(`${tckn || 'Satır'} hatası: ${msg}`);
         }
       }
 
       setResults({ successCount, failCount, errors });
       setSuccess(`${successCount} borç kaydı başarıyla eklendi. ${failCount} kayıt başarısız.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Toplu borç yükleme başarısız');
+      setError((err as any)?.message || (err instanceof Error ? err.message : 'Toplu borç yükleme başarısız'));
     } finally {
       setLoading(false);
     }
@@ -340,6 +359,38 @@ export function BulkOperations() {
     }
   };
 
+  const excelDateToISO = (value: string): string | null => {
+    if (!value || value.toLowerCase() === 'null' || value.trim() === '') return null;
+    const trimmed = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+    const num = parseFloat(trimmed);
+    if (!isNaN(num) && num > 1000 && num < 100000) {
+      const date = new Date(Math.round((num - 25569) * 86400 * 1000));
+      return date.toISOString().split('T')[0];
+    }
+    return null;
+  };
+
+  const normalizePhone = (value: string): string => {
+    if (!value || value.toLowerCase() === 'null' || value.trim() === '') return '';
+    const trimmed = value.trim();
+    const num = parseFloat(trimmed);
+    if (!isNaN(num) && trimmed.toLowerCase().includes('e')) {
+      return Math.round(num).toString();
+    }
+    return trimmed.replace(/\D/g, '');
+  };
+
+  const generateEmail = (fullName: string, membershipNumber: string, tcNo: string): string => {
+    const slug = fullName
+      .toLowerCase()
+      .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+      .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+      .replace(/[^a-z0-9]/g, '.');
+    const suffix = membershipNumber.replace(/[^a-z0-9]/gi, '').toLowerCase() || tcNo.slice(-4) || Date.now().toString().slice(-6);
+    return `${slug}.${suffix}@uye.local`;
+  };
+
   const handleSQLMemberImport = async () => {
     if (!file) {
       setError('Lütfen bir dosya seçin');
@@ -353,19 +404,25 @@ export function BulkOperations() {
     try {
       const text = await file.text();
       const rows = parseCSV(text);
-      const headers = rows[0];
-      const data = rows.slice(1);
+
+      const headerRowIndex = rows.findIndex(row =>
+        row.some(cell => cell.trim() === 'Ad_Soyad')
+      );
+
+      if (headerRowIndex === -1) {
+        throw new Error('CSV dosyasında "Ad_Soyad" sütunu bulunamadı');
+      }
+
+      const headers = rows[headerRowIndex];
+      const data = rows.slice(headerRowIndex + 1).filter(row =>
+        row.length > 1 && row.some(cell => cell.trim() !== '')
+      );
 
       const columnMap: { [key: string]: number } = {};
       headers.forEach((header, index) => {
-        columnMap[header.trim()] = index;
+        const key = header.trim();
+        if (!(key in columnMap)) columnMap[key] = index;
       });
-
-      const requiredFields = ['Ad_Soyad', 'E_Posta'];
-      const missingFields = requiredFields.filter(field => !(field in columnMap));
-      if (missingFields.length > 0) {
-        throw new Error(`CSV dosyasında gerekli sütunlar bulunamadı: ${missingFields.join(', ')}`);
-      }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-member`;
       const { data: { session } } = await supabase.auth.getSession();
@@ -377,34 +434,34 @@ export function BulkOperations() {
       for (const row of data) {
         try {
           const fullName = row[columnMap['Ad_Soyad']]?.trim();
-          const email = row[columnMap['E_Posta']]?.trim();
-
-          if (!fullName || !email) {
-            throw new Error('Ad Soyad ve E-posta gereklidir');
+          if (!fullName || fullName.toLowerCase() === 'null' || fullName === '') {
+            throw new Error('Ad Soyad boş');
           }
 
           const membershipNumber = row[columnMap['Uye_No']]?.trim() || '';
-          const tcNo = row[columnMap['TC_No']]?.trim() || '';
-          const fatherName = row[columnMap['Baba_Adi']]?.trim() || '';
-          const motherName = row[columnMap['Ana_Adi']]?.trim() || '';
-          const birthPlace = row[columnMap['Dogum_Yeri']]?.trim() || '';
-          const birthDate = row[columnMap['Dogum_Tarihi']]?.trim() || '';
-          const bloodType = row[columnMap['Kan_Grubu']]?.trim() || '';
-          const profession = row[columnMap['Meslek']]?.trim() || '';
-          const education = row[columnMap['Ogrenim_Durumu']]?.trim() || '';
-          const maritalStatus = row[columnMap['Medeni_Hali']]?.trim() || '';
-          const gender = row[columnMap['Cinsiyet']]?.trim() || '';
-          const membershipDecision = row[columnMap['Uyelik_Karar_No']]?.trim() || '';
-          const membershipDate = row[columnMap['Uyelik_Tarihi']]?.trim() || '';
-          const province = row[columnMap['Il']]?.trim() || '';
-          const district = row[columnMap['Ilce']]?.trim() || '';
-          const address = row[columnMap['Adres']]?.trim() || '';
-          const phone = row[columnMap['Telefon_No']]?.trim() || '';
-          const membershipStatus = row[columnMap['Uyelik_Durumu']]?.trim() || 'Aktif';
+          const tcRaw = row[columnMap['TC_No']]?.trim() || '';
+          const tcNo = (tcRaw === 'NULL' || tcRaw.toLowerCase() === 'null') ? '' : tcRaw;
 
-          const defaultPassword = tcNo || `Caybasi${membershipNumber}`;
+          let email = row[columnMap['E_Posta']]?.trim() || '';
+          if (!email || email.toLowerCase() === 'null') {
+            email = generateEmail(fullName, membershipNumber, tcNo);
+          }
 
-          const fullAddress = [address, district, province].filter(Boolean).join(', ');
+          const get = (key: string) => {
+            const v = row[columnMap[key]]?.trim() || '';
+            return (v === 'NULL' || v.toLowerCase() === 'null') ? '' : v;
+          };
+
+          const birthDate = excelDateToISO(get('Dogum_Tarihi'));
+          const membershipDate = excelDateToISO(get('Uyelik_Tarihi'));
+          const phone = normalizePhone(get('Telefon_No'));
+          const membershipStatus = get('Uyelik_Durumu') || 'Aktif';
+
+          const addressParts = [get('Adres'), get('Ilce'), get('Il')].filter(Boolean);
+          const fullAddress = addressParts.join(', ');
+
+          const cleanMembershipNo = membershipNumber.replace(/[^a-z0-9]/gi, '');
+          const defaultPassword = tcNo || `Caybasi${cleanMembershipNo}` || 'Caybasi123';
 
           const response = await fetch(apiUrl, {
             method: 'POST',
@@ -420,17 +477,17 @@ export function BulkOperations() {
               address: fullAddress,
               membership_number: membershipNumber,
               tc_no: tcNo,
-              father_name: fatherName,
-              mother_name: motherName,
-              birth_place: birthPlace,
-              birth_date: birthDate || null,
-              blood_type: bloodType,
-              profession,
-              education_level: education,
-              marital_status: maritalStatus,
-              gender,
-              membership_decision_no: membershipDecision,
-              membership_date: membershipDate || null,
+              father_name: get('Baba_Adi'),
+              mother_name: get('Ana_Adi'),
+              birth_place: get('Dogum_Yeri'),
+              birth_date: birthDate,
+              blood_type: get('Kan_Grubu'),
+              profession: get('Meslek'),
+              education_level: get('Ogrenim_Durumu'),
+              marital_status: get('Medeni_Hali'),
+              gender: get('Cinsiyet'),
+              membership_decision_no: get('Uyelik_Karar_No'),
+              membership_date: membershipDate,
               membership_status: membershipStatus === 'Aktif' ? 'active' : 'inactive'
             }),
           });
@@ -443,8 +500,8 @@ export function BulkOperations() {
           successCount++;
         } catch (err) {
           failCount++;
-          const emailForError = row[columnMap['E_Posta']]?.trim() || 'Bilinmeyen';
-          errors.push(`${emailForError} - ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
+          const nameForError = row[columnMap['Ad_Soyad']]?.trim() || 'Bilinmeyen';
+          errors.push(`${nameForError} - ${err instanceof Error ? err.message : 'Bilinmeyen hata'}`);
         }
       }
 
@@ -651,7 +708,7 @@ export function BulkOperations() {
                   <p className="text-sm text-blue-700 mb-2">CSV dosyanız aşağıdaki sütunları içermelidir:</p>
                   {activeOperation === 'debt' && (
                     <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
-                      <li>email veya e-posta (zorunlu)</li>
+                      <li>tckn veya tc_no (zorunlu) - TC Kimlik Numarası</li>
                       <li>başlık veya title (zorunlu)</li>
                       <li>tutar veya amount (zorunlu)</li>
                       <li>tarih veya date (opsiyonel, format: YYYY-MM-DD)</li>

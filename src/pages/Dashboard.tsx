@@ -17,6 +17,7 @@ import { SMTPConfiguration } from '../components/SMTPConfiguration';
 import { BoardManagement } from '../components/BoardManagement';
 import { EmailTemplates } from '../components/EmailTemplates';
 import { TreasuryManagement } from '../components/TreasuryManagement';
+import { NotificationsPanel } from '../components/NotificationsPanel';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -488,23 +489,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
         )}
 
         {activeTab === 'notifications' && currentMember?.is_admin && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Bildirim Gönder</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bildirim Türü
-                </label>
-                <select
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  disabled
-                >
-                  <option>E-posta (Yakında)</option>
-                </select>
-                <p className="text-sm text-gray-500 mt-1">Bildirim sistemi yakında aktif olacak</p>
-              </div>
-            </div>
-          </div>
+          <NotificationsPanel />
         )}
           </div>
         </main>

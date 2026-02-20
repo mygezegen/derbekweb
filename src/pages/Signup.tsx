@@ -42,15 +42,13 @@ export function Signup() {
         const { data: member } = await supabase
           .from('members')
           .select('*')
-          .eq('id', session.user.id)
-          .single();
+          .eq('auth_id', session.user.id)
+          .maybeSingle();
 
         if (member && member.tc_identity_no && member.tc_identity_no !== '00000000000') {
           navigate('/app');
-        } else if (member && session.user.email_confirmed_at) {
+        } else if (session) {
           setStep('details');
-        } else if (member) {
-          setStep('verify');
         }
       }
     };
@@ -81,9 +79,16 @@ export function Signup() {
         }
       });
 
-      if (signUpError) throw signUpError;
+      if (signUpError) {
+        if (signUpError.message.includes('already registered') || signUpError.message.includes('user_already_exists')) {
+          throw new Error('Bu e-posta adresi zaten kayıtlı. Lütfen giriş yapın.');
+        }
+        throw signUpError;
+      }
 
-      if (data.user) {
+      if (data.session) {
+        setStep('details');
+      } else if (data.user) {
         setStep('verify');
       }
     } catch (err) {
@@ -174,9 +179,22 @@ export function Signup() {
           profession: formData.profession,
           phone: formData.phone
         })
-        .eq('id', session.user.id);
+        .eq('auth_id', session.user.id);
 
       if (updateError) throw updateError;
+
+      try {
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-welcome-email`;
+        await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      } catch {
+        // E-posta gönderilemese bile kayıt tamamlandı
+      }
 
       navigate('/app');
     } catch (err) {

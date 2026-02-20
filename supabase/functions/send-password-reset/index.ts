@@ -42,32 +42,25 @@ Deno.serve(async (req: Request) => {
       throw new Error('SMTP ayarları yapılandırılmamış. Lütfen yönetici panelinden SMTP ayarlarını yapılandırın.');
     }
 
-    const supabaseAuth = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://association-app-deve-qlaf.bolt.host';
 
-    const { data: resetData, error: resetError } = await supabaseAuth.auth.admin.generateLink({
+    const { data: resetData, error: resetError } = await supabaseClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
+      options: {
+        redirectTo: `${origin}/reset-password`,
+      },
     });
 
     if (resetError) {
       throw new Error(`Şifre sıfırlama linki oluşturulamadı: ${resetError.message}`);
     }
 
-    if (!resetData.properties?.hashed_token) {
-      throw new Error('Şifre sıfırlama token\'ı oluşturulamadı');
+    if (!resetData.properties?.action_link) {
+      throw new Error('Şifre sıfırlama bağlantısı oluşturulamadı');
     }
 
-    const origin = req.headers.get('origin') || 'https://association-app-deve-qlaf.bolt.host';
-    const resetUrl = `${origin}/reset-password#access_token=${resetData.properties.hashed_token}&type=recovery`;
+    const resetUrl = resetData.properties.action_link;
 
     const { data: member } = await supabaseClient
       .from('members')
@@ -129,7 +122,7 @@ Deno.serve(async (req: Request) => {
                             ${resetUrl}
                           </p>
                           <p style="color: #dc2626; margin: 0 0 16px 0; font-size: 14px; line-height: 1.5; font-weight: bold;">
-                            ⚠️ Bu link 1 saat geçerlidir.
+                            Bu link 1 saat geçerlidir.
                           </p>
                           <p style="color: #6b7280; margin: 0 0 16px 0; font-size: 14px; line-height: 1.5;">
                             Eğer bu isteği siz yapmadıysanız, bu e-postayı görmezden gelebilirsiniz. Şifreniz değiştirilmeyecektir.

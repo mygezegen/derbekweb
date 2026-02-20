@@ -3,6 +3,36 @@ import { supabase } from '../lib/supabase';
 import { Member, Dues, MemberDuesWithDetails } from '../types';
 import { Search, DollarSign, Check, X, Save } from 'lucide-react';
 
+function numberToTurkishWords(n: number): string {
+  if (n === 0) return 'Sıfır';
+  const ones = ['', 'Bir', 'İki', 'Üç', 'Dört', 'Beş', 'Altı', 'Yedi', 'Sekiz', 'Dokuz'];
+  const tens = ['', 'On', 'Yirmi', 'Otuz', 'Kırk', 'Elli', 'Altmış', 'Yetmiş', 'Seksen', 'Doksan'];
+  function convert(num: number): string {
+    if (num === 0) return '';
+    if (num < 10) return ones[num];
+    if (num < 100) return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ones[num % 10] : '');
+    if (num < 1000) {
+      const h = Math.floor(num / 100);
+      return (h === 1 ? '' : ones[h]) + 'Yüz' + convert(num % 100);
+    }
+    if (num < 1000000) {
+      const k = Math.floor(num / 1000);
+      return (k === 1 ? '' : convert(k)) + 'Bin' + convert(num % 1000);
+    }
+    return num.toString();
+  }
+  return convert(Math.floor(n));
+}
+
+function getPaymentMethodLabel(method: string): string {
+  switch (method) {
+    case 'cash': return 'Nakit';
+    case 'bank_transfer': return 'Havale/EFT';
+    case 'credit_card': return 'Kredi Kartı';
+    default: return 'Diğer';
+  }
+}
+
 export function PaymentCollection() {
   const [members, setMembers] = useState<Member[]>([]);
   const [dues, setDues] = useState<Dues[]>([]);
@@ -14,6 +44,7 @@ export function PaymentCollection() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank_transfer' | 'credit_card' | 'other'>('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [receiptNo, setReceiptNo] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
@@ -44,6 +75,135 @@ export function PaymentCollection() {
     m.email.toLowerCase().includes(search.toLowerCase()) ||
     (m.phone && m.phone.includes(search))
   );
+
+  const sendReceiptEmail = async (
+    member: Member,
+    duesItem: Dues,
+    amount: number,
+    method: string,
+    receipt: string,
+    notes: string,
+    adminName: string,
+    assocAddress: string
+  ) => {
+    if (!member.email) return;
+
+    const payDate = new Date().toLocaleDateString('tr-TR');
+    const amountWords = numberToTurkishWords(Math.round(amount));
+    const kurusAmount = Math.round((amount - Math.floor(amount)) * 100);
+    const amountDisplay = `${amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tahsilat Makbuzu</title>
+</head>
+<body style="margin:0;padding:20px;background:#f5f5f5;font-family:Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;background:#fff;border:2px solid #333;padding:0;">
+
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:12px 16px;border-bottom:2px solid #333;width:60%;">
+          <div style="font-size:11px;font-weight:bold;text-align:center;line-height:1.4;">
+            DERNEK GELİRLERİ<br>ALINDI BELGESİ
+          </div>
+        </td>
+        <td style="padding:12px 16px;border-bottom:2px solid #333;border-left:1px solid #333;">
+          <div style="font-size:11px;margin-bottom:4px;"><b>Seri :</b> A</div>
+          <div style="font-size:11px;"><b>Sıra No :</b> <span style="color:#cc0000;font-size:14px;font-weight:bold;">${receipt || '-'}</span></div>
+        </td>
+      </tr>
+    </table>
+
+    <div style="padding:10px 16px;border-bottom:1px solid #ccc;font-size:11px;">
+      <b>Cilt No:</b> &nbsp;
+    </div>
+
+    <div style="padding:12px 16px;border-bottom:1px solid #ccc;font-size:11px;line-height:1.8;">
+      <b>Derneğin</b><br>
+      &nbsp;&nbsp;Adı &nbsp;: Diyarbakır Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği<br>
+      &nbsp;&nbsp;Merkezi &nbsp;: ${assocAddress || 'Çaybaşı Köyü, Çüngüş, Diyarbakır'}<br>
+      &nbsp;&nbsp;Kütük No : 34-114-082
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #ccc;">
+      <tr>
+        <td style="padding:12px 16px;font-size:11px;vertical-align:top;width:40%;border-right:1px solid #333;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);text-align:center;font-weight:bold;font-size:10px;border-right:2px solid #333;">
+          PARAYI<br>YATIRAN
+        </td>
+        <td style="padding:12px 16px;font-size:11px;line-height:2;">
+          <b>Adı ve Soyadı :</b> ${member.full_name}<br>
+          <b>T.C. Kimlik No:</b> ${member.tc_identity_no || '-'}<br>
+          <b>Cep Tel / e-posta:</b> ${member.phone || ''} ${member.email ? `/ ${member.email}` : ''}
+        </td>
+      </tr>
+    </table>
+
+    <div style="padding:10px 16px;font-size:11px;font-weight:bold;border-bottom:1px solid #ccc;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="font-weight:bold;">GELİRİN ÇEŞİDİ</td>
+          <td style="text-align:right;font-weight:bold;">TL-Krş</td>
+        </tr>
+        <tr>
+          <td style="padding:6px 0;font-size:13px;">${duesItem.title} (${getPaymentMethodLabel(method)})</td>
+          <td style="text-align:right;font-size:16px;font-weight:bold;color:#cc0000;">${amountDisplay}</td>
+        </tr>
+        ${notes ? `<tr><td colspan="2" style="font-size:11px;color:#555;padding-top:4px;">Not: ${notes}</td></tr>` : ''}
+      </table>
+    </div>
+
+    <div style="padding:12px 16px;border-bottom:1px solid #ccc;font-size:11px;line-height:1.8;">
+      Yalnız <b>${amountWords}</b> TL ${kurusAmount > 0 ? `<b>${kurusAmount}</b> Krş` : ''} tahsil edilmiştir.
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:12px 16px;font-size:11px;vertical-align:top;width:40%;border-right:2px solid #333;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);text-align:center;font-weight:bold;font-size:10px;">
+          PARAYI<br>TAHSİL EDEN
+        </td>
+        <td style="padding:12px 16px;font-size:11px;line-height:2;">
+          <b>Adı ve Soyadı :</b> ${adminName}<br>
+          <b>Tarih :</b> ${payDate}<br>
+          <b>İmza :</b>
+        </td>
+      </tr>
+    </table>
+
+    <div style="background:#f9f9f9;padding:8px 16px;border-top:1px solid #ccc;font-size:9px;color:#666;">
+      (1) Tüzel kişiler için, T.C. Kimlik No yerine Vergi Numarası yazılır.<br>
+      (2) Elektronik ortamda düzenlenmesi durumunda boş bırakılabilir.
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          to: member.email,
+          subject: `Tahsilat Makbuzu - ${receipt ? `No: ${receipt} - ` : ''}${duesItem.title}`,
+          html,
+          recipient_name: member.full_name,
+        }),
+      });
+    } catch {
+      // Email failure should not block the payment success flow
+    }
+  };
 
   const getCurrentMemberDues = () => {
     if (!selectedMember) return null;
@@ -86,7 +246,8 @@ export function PaymentCollection() {
             status: newStatus,
             paid_at: newStatus === 'paid' ? new Date().toISOString() : currentDues.paid_at,
             payment_method: paymentMethod,
-            notes: paymentNotes || currentDues.notes
+            notes: paymentNotes || currentDues.notes,
+            receipt_no: receiptNo || currentDues.receipt_no
           })
           .eq('id', currentDues.id);
 
@@ -109,20 +270,34 @@ export function PaymentCollection() {
             status: isPaid ? 'paid' : 'pending',
             paid_at: isPaid ? new Date().toISOString() : null,
             payment_method: paymentMethod,
-            notes: paymentNotes
+            notes: paymentNotes,
+            receipt_no: receiptNo || null
           });
 
         if (insertError) throw insertError;
       }
 
-      const memberName = members.find(m => m.id === selectedMember)?.full_name;
-      setSuccess(`${memberName} için ₺${amount.toFixed(2)} ödeme kaydedildi`);
+      const memberObj = members.find(m => m.id === selectedMember);
+      const duesObj = dues.find(d => d.id === selectedDues);
+      setSuccess(`${memberObj?.full_name} için ₺${amount.toFixed(2)} ödeme kaydedildi`);
+
+      if (memberObj && duesObj) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        const [{ data: contactData }, { data: adminMember }] = await Promise.all([
+          supabase.from('contact_info').select('address').maybeSingle(),
+          supabase.from('members').select('full_name').eq('auth_id', currentUser?.id ?? '').maybeSingle(),
+        ]);
+        const adminName = adminMember?.full_name || '';
+        const assocAddress = contactData?.address || '';
+        sendReceiptEmail(memberObj, duesObj, amount, paymentMethod, receiptNo, paymentNotes, adminName, assocAddress);
+      }
 
       setSelectedMember('');
       setSelectedDues('');
       setPaymentAmount('');
       setPaymentMethod('cash');
       setPaymentNotes('');
+      setReceiptNo('');
 
       loadData();
     } catch (err) {
@@ -223,7 +398,7 @@ export function PaymentCollection() {
               </div>
               <select
                 value={selectedMember}
-                onChange={(e) => setSelectedMember(e.target.value)}
+                onChange={(e) => { setSelectedMember(e.target.value); setSelectedDues(''); }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               >
@@ -247,11 +422,25 @@ export function PaymentCollection() {
                 required
               >
                 <option value="">Aidat seçin</option>
-                {dues.map(duesItem => (
-                  <option key={duesItem.id} value={duesItem.id}>
-                    {duesItem.title} - ₺{duesItem.amount.toFixed(2)} ({duesItem.period_year} Yılı)
-                  </option>
-                ))}
+                {selectedMember
+                  ? memberDues
+                      .filter(md => md.member_id === selectedMember && md.status !== 'paid')
+                      .map(md => {
+                        const duesItem = dues.find(d => d.id === md.dues_id);
+                        if (!duesItem) return null;
+                        const remaining = duesItem.amount - (md.paid_amount || 0);
+                        return (
+                          <option key={duesItem.id} value={duesItem.id}>
+                            {duesItem.title} ({duesItem.period_year} Yılı) - Kalan: ₺{remaining.toFixed(2)}
+                          </option>
+                        );
+                      })
+                  : dues.map(duesItem => (
+                      <option key={duesItem.id} value={duesItem.id}>
+                        {duesItem.title} ({duesItem.period_year} Yılı) - ₺{duesItem.amount.toFixed(2)}
+                      </option>
+                    ))
+                }
               </select>
             </div>
 
@@ -286,6 +475,19 @@ export function PaymentCollection() {
               </select>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Makbuz No <span className="text-gray-400 font-normal">(Opsiyonel)</span>
+              </label>
+              <input
+                type="text"
+                value={receiptNo}
+                onChange={(e) => setReceiptNo(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Makbuz numarası..."
+              />
+            </div>
+
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Notlar (Opsiyonel)
@@ -316,6 +518,7 @@ export function PaymentCollection() {
                 setPaymentAmount('');
                 setPaymentMethod('cash');
                 setPaymentNotes('');
+                setReceiptNo('');
                 setSearch('');
               }}
               className="flex items-center gap-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
@@ -337,6 +540,7 @@ export function PaymentCollection() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üye</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aidat</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Makbuz No</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ödeme Yöntemi</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
@@ -355,6 +559,13 @@ export function PaymentCollection() {
                     ₺{payment.paid_amount.toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {(payment as any).receipt_no ? (
+                      <span className="font-mono text-gray-800">{(payment as any).receipt_no}</span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {getPaymentMethodText(payment.payment_method || 'cash')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
@@ -369,7 +580,7 @@ export function PaymentCollection() {
               ))}
               {getRecentPayments().length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                     Henüz ödeme kaydı bulunmuyor
                   </td>
                 </tr>
