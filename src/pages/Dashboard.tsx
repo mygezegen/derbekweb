@@ -18,6 +18,7 @@ import { BoardManagement } from '../components/BoardManagement';
 import { EmailTemplates } from '../components/EmailTemplates';
 import { TreasuryManagement } from '../components/TreasuryManagement';
 import { NotificationsPanel } from '../components/NotificationsPanel';
+import { SMSConfiguration } from '../components/SMSConfiguration';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -26,7 +27,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'board' | 'email-templates'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -181,13 +182,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
       { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
       { id: 'smtp', label: 'E-posta Ayarları', icon: Mail, pageKey: 'smtp' },
+      { id: 'sms', label: 'SMS Ayarları', icon: MessageSquare, pageKey: 'sms' },
       { id: 'email-templates', label: 'E-posta Şablonları', icon: FileText, pageKey: 'email-templates' },
       { id: 'settings', label: 'Sayfa Ayarları', icon: Sliders, pageKey: 'settings' }
     ] : []),
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -474,6 +476,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'smtp' && currentMember?.is_admin && (
           <SMTPConfiguration />
+        )}
+
+        {activeTab === 'sms' && currentMember?.is_admin && (
+          <SMSConfiguration />
         )}
 
         {activeTab === 'board' && currentMember?.is_admin && (

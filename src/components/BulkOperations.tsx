@@ -65,8 +65,8 @@ export function BulkOperations() {
       filename = 'üye_yükleme_şablonu.csv';
     } else if (type === 'sql-import') {
       csv = 'Uye_No,TC_No,Ad_Soyad,Baba_Adi,Ana_Adi,Dogum_Yeri,Dogum_Tarihi,Kan_Grubu,Meslek,Ogrenim_Durumu,Medeni_Hali,Cinsiyet,Uyelik_Karar_No,Uyelik_Tarihi,Il,Ilce,Adres,E_Posta,Telefon_No,Uyelik_Durumu\n';
-      csv += '1001,12345678901,Ahmet Yılmaz,Mehmet,Fatma,Adıyaman,1985-05-15,A+,Mühendis,Üniversite,Evli,Erkek,2020/01,2020-01-15,Adıyaman,Çüngüş,Çaybaşı Köyü,ahmet@email.com,05551234567,Aktif\n';
-      csv += '1002,23456789012,Ayşe Demir,Ali,Zeynep,Adıyaman,1990-08-20,0+,Öğretmen,Üniversite,Bekar,Kadın,2020/02,2020-02-20,İstanbul,Kadıköy,Test Mahallesi,ayse@email.com,05559876543,Aktif\n';
+      csv += '1001,12345678901,Ahmet Yılmaz,Mehmet,Fatma,Adıyaman,1985-05-15,A+,Mühendis,Üniversite,Evli,ERKEK,2020/01,2020-01-15,Adıyaman,Çüngüş,Çaybaşı Köyü,ahmet@email.com,05551234567,Aktif\n';
+      csv += '1002,23456789012,Ayşe Demir,Ali,Zeynep,Adıyaman,1990-08-20,0+,Öğretmen,Üniversite,Bekar,KADIN,2020/02,2020-02-20,İstanbul,Kadıköy,Test Mahallesi,ayse@email.com,05559876543,Aktif\n';
       filename = 'sql_uye_iceri_aktarma_sablonu.csv';
     }
 
@@ -317,6 +317,10 @@ export function BulkOperations() {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-member`;
       const { data: { session } } = await supabase.auth.getSession();
 
+      if (!session?.access_token) {
+        throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+      }
+
       let successCount = 0;
       let failCount = 0;
       const errors: string[] = [];
@@ -332,7 +336,7 @@ export function BulkOperations() {
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${session?.access_token}`,
+              'Authorization': `Bearer ${session.access_token}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ email, password, full_name: fullName, phone, address }),
@@ -427,6 +431,10 @@ export function BulkOperations() {
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-member`;
       const { data: { session } } = await supabase.auth.getSession();
 
+      if (!session?.access_token) {
+        throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+      }
+
       let successCount = 0;
       let failCount = 0;
       const errors: string[] = [];
@@ -463,10 +471,20 @@ export function BulkOperations() {
           const cleanMembershipNo = membershipNumber.replace(/[^a-z0-9]/gi, '');
           const defaultPassword = tcNo || `Caybasi${cleanMembershipNo}` || 'Caybasi123';
 
+          const genderRaw = get('Cinsiyet').toLowerCase();
+          let gender = null;
+          if (genderRaw === 'erkek' || genderRaw === 'male' || genderRaw === 'e') {
+            gender = 'male';
+          } else if (genderRaw === 'kadın' || genderRaw === 'kadin' || genderRaw === 'female' || genderRaw === 'k') {
+            gender = 'female';
+          } else if (genderRaw === 'other' || genderRaw === 'diğer' || genderRaw === 'diger') {
+            gender = 'other';
+          }
+
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${session?.access_token}`,
+              'Authorization': `Bearer ${session.access_token}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -475,20 +493,17 @@ export function BulkOperations() {
               full_name: fullName,
               phone,
               address: fullAddress,
-              membership_number: membershipNumber,
-              tc_no: tcNo,
-              father_name: get('Baba_Adi'),
-              mother_name: get('Ana_Adi'),
-              birth_place: get('Dogum_Yeri'),
-              birth_date: birthDate,
-              blood_type: get('Kan_Grubu'),
-              profession: get('Meslek'),
-              education_level: get('Ogrenim_Durumu'),
-              marital_status: get('Medeni_Hali'),
-              gender: get('Cinsiyet'),
-              membership_decision_no: get('Uyelik_Karar_No'),
-              membership_date: membershipDate,
-              membership_status: membershipStatus === 'Aktif' ? 'active' : 'inactive'
+              registry_number: membershipNumber,
+              tc_identity_no: tcNo || null,
+              father_name: get('Baba_Adi') || null,
+              mother_name: get('Ana_Adi') || null,
+              province: get('Il') || null,
+              district: get('Ilce') || null,
+              profession: get('Meslek') || null,
+              education_level: get('Ogrenim_Durumu') || null,
+              gender: gender,
+              registration_date: membershipDate || null,
+              is_active: membershipStatus === 'Aktif'
             }),
           });
 

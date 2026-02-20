@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Mail, MessageSquare } from 'lucide-react';
+import { Mail, MessageSquare, Users } from 'lucide-react';
+import { sendSMS } from '../lib/smsService';
+import { MemberSelectionModal } from './MemberSelectionModal';
 
 export function NotificationsPanel() {
   const [members, setMembers] = useState<Member[]>([]);
   const [notificationType, setNotificationType] = useState<'email' | 'sms'>('email');
   const [recipientType, setRecipientType] = useState<'all' | 'debtors' | 'specific'>('all');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [showMemberSelection, setShowMemberSelection] = useState(false);
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [sendingNotification, setSendingNotification] = useState(false);
@@ -53,6 +57,11 @@ export function NotificationsPanel() {
           .select('member_id')
           .neq('status', 'paid');
         recipientIds = Array.from(new Set(debtorsData?.map(d => d.member_id) || []));
+      } else if (recipientType === 'specific') {
+        if (selectedMemberIds.length === 0) {
+          throw new Error('Lütfen en az bir üye seçin');
+        }
+        recipientIds = selectedMemberIds;
       }
 
       const { data: notification, error: notifError } = await supabase
@@ -82,14 +91,60 @@ export function NotificationsPanel() {
 
       if (recipientsError) throw recipientsError;
 
-      setSuccess(`${notificationType === 'email' ? 'E-posta' : 'SMS'} bildirimi oluşturuldu. ${recipientIds.length} alıcıya gönderilecek.`);
+      if (notificationType === 'sms') {
+        const recipientMembers = members.filter(m => recipientIds.includes(m.id));
+        const phoneNumbers = recipientMembers
+          .map(m => m.phone)
+          .filter(phone => phone && phone.trim().length > 0);
+
+        if (phoneNumbers.length > 0) {
+          const smsResult = await sendSMS({
+            recipients: phoneNumbers,
+            message: notificationMessage,
+          });
+
+          if (!smsResult.success) {
+            throw new Error(`SMS gönderilemedi: ${smsResult.error}`);
+          }
+
+          await supabase
+            .from('notifications')
+            .update({ status: 'sent' })
+            .eq('id', notification.id);
+
+          await supabase
+            .from('notification_recipients')
+            .update({ status: 'sent', sent_at: new Date().toISOString() })
+            .eq('notification_id', notification.id);
+
+          setSuccess(`SMS başarıyla gönderildi. ${phoneNumbers.length} alıcıya ulaştı. Sipariş ID: ${smsResult.orderId}`);
+        } else {
+          throw new Error('Telefon numarası bulunan alıcı yok');
+        }
+      } else {
+        setSuccess(`E-posta bildirimi oluşturuldu. ${recipientIds.length} alıcıya gönderilecek.`);
+      }
+
       setNotificationTitle('');
       setNotificationMessage('');
+      setSelectedMemberIds([]);
+      setRecipientType('all');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bildirim gönderilirken hata oluştu');
     } finally {
       setSendingNotification(false);
     }
+  };
+
+  const handleRecipientTypeChange = (newType: 'all' | 'debtors' | 'specific') => {
+    setRecipientType(newType);
+    if (newType === 'specific') {
+      setShowMemberSelection(true);
+    }
+  };
+
+  const handleMemberSelectionConfirm = (memberIds: string[]) => {
+    setSelectedMemberIds(memberIds);
   };
 
   return (
@@ -112,7 +167,7 @@ export function NotificationsPanel() {
         <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Bilgi</h4>
         <p className="text-xs sm:text-sm text-blue-700">
           Bu sayfadan üyelerinize toplu e-posta veya SMS bildirimi gönderebilirsiniz.
-          Bildirimler veritabanına kaydedilir ancak gerçek gönderim için SMS ve e-posta servis entegrasyonları gereklidir.
+          SMS gönderimi için SMS Yapılandırması sayfasından İletimerkezi.com API bilgilerinizi tanımlamanız gerekmektedir.
         </p>
       </div>
 
@@ -154,13 +209,25 @@ export function NotificationsPanel() {
             </label>
             <select
               value={recipientType}
-              onChange={(e) => setRecipientType(e.target.value as 'all' | 'debtors' | 'specific')}
+              onChange={(e) => handleRecipientTypeChange(e.target.value as 'all' | 'debtors' | 'specific')}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
             >
               <option value="all">Tüm Üyeler</option>
               <option value="debtors">Sadece Borçlu Üyeler</option>
-              <option value="specific">Belirli Üyeler (Yakında)</option>
+              <option value="specific">Belirli Üyeler</option>
             </select>
+            {recipientType === 'specific' && (
+              <button
+                type="button"
+                onClick={() => setShowMemberSelection(true)}
+                className="mt-2 flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <Users size={16} />
+                {selectedMemberIds.length > 0
+                  ? `${selectedMemberIds.length} üye seçildi - Düzenle`
+                  : 'Üye Seç'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -221,11 +288,24 @@ export function NotificationsPanel() {
           <div className="bg-green-50 rounded-lg p-3 md:p-4">
             <p className="text-xs sm:text-sm text-green-700 mb-1">Seçili Alıcı</p>
             <p className="text-xl sm:text-2xl font-bold text-green-800">
-              {recipientType === 'all' ? members.length : recipientType === 'debtors' ? '...' : '0'}
+              {recipientType === 'all'
+                ? members.length
+                : recipientType === 'debtors'
+                ? '...'
+                : selectedMemberIds.length}
             </p>
           </div>
         </div>
       </div>
+
+      {showMemberSelection && (
+        <MemberSelectionModal
+          members={members}
+          selectedMemberIds={selectedMemberIds}
+          onClose={() => setShowMemberSelection(false)}
+          onConfirm={handleMemberSelectionConfirm}
+        />
+      )}
     </div>
   );
 }

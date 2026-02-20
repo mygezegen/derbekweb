@@ -21,6 +21,7 @@ Deno.serve(async (req: Request) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.error("Authorization header bulunamadı");
       return new Response(
         JSON.stringify({ error: "Authorization header gerekli" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -28,14 +29,30 @@ Deno.serve(async (req: Request) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    console.log("Token alındı, uzunluk:", token.length);
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+        auth: { autoRefreshToken: false, persistSession: false }
+      }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
+      console.error("Auth hatası:", authError?.message);
       return new Response(
         JSON.stringify({ error: `Yetkisiz erişim: ${authError?.message || "Kullanıcı bulunamadı"}` }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Kullanıcı doğrulandı:", user.id);
 
     const { data: currentMember } = await supabaseAdmin
       .from("members")
@@ -122,50 +139,128 @@ Deno.serve(async (req: Request) => {
     if (website) memberData.website = website;
 
     if (email && password) {
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name },
-      });
+      const { data: existingUserByEmail } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUserByEmail.users.find(u => u.email === email);
 
-      if (createError) {
-        return new Response(
-          JSON.stringify({ error: `Kullanıcı oluşturulamadı: ${createError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      let authId: string;
+
+      if (existingUser) {
+        authId = existingUser.id;
+        console.log(`Email zaten mevcut (${email}), mevcut auth kullanılıyor:`, authId);
+      } else {
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name },
+        });
+
+        if (createError) {
+          return new Response(
+            JSON.stringify({ error: `Kullanıcı oluşturulamadı: ${createError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        authId = newUser.user.id;
       }
 
-      memberData.auth_id = newUser.user.id;
+      memberData.auth_id = authId;
 
-      const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+      const { data: existingMember } = await supabaseAdmin
+        .from("members")
+        .select("id")
+        .eq("auth_id", authId)
+        .maybeSingle();
 
-      if (insertError) {
-        await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+      if (existingMember) {
+        const { error: updateError } = await supabaseAdmin
+          .from("members")
+          .update(memberData)
+          .eq("id", existingMember.id);
+
+        if (updateError) {
+          return new Response(
+            JSON.stringify({ error: `Üye kaydı güncellenemedi: ${updateError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         return new Response(
-          JSON.stringify({ error: `Üye kaydı oluşturulamadı: ${insertError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ success: true, message: `${full_name} başarıyla güncellendi (sistem erişimi ile)` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+
+        if (insertError) {
+          if (!existingUser) {
+            await supabaseAdmin.auth.admin.deleteUser(authId);
+          }
+          return new Response(
+            JSON.stringify({ error: `Üye kaydı oluşturulamadı: ${insertError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi (sistem erişimi ile)` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      return new Response(
-        JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi (sistem erişimi ile)` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     } else {
-      const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+      let existingMemberId: string | null = null;
 
-      if (insertError) {
-        return new Response(
-          JSON.stringify({ error: `Üye kaydı oluşturulamadı: ${insertError.message}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (email) {
+        const { data: memberByEmail } = await supabaseAdmin
+          .from("members")
+          .select("id")
+          .eq("email", email)
+          .maybeSingle();
+        if (memberByEmail) existingMemberId = memberByEmail.id;
       }
 
-      return new Response(
-        JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi` }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      if (!existingMemberId && tc_identity_no) {
+        const { data: memberByTc } = await supabaseAdmin
+          .from("members")
+          .select("id")
+          .eq("tc_identity_no", tc_identity_no)
+          .maybeSingle();
+        if (memberByTc) existingMemberId = memberByTc.id;
+      }
+
+      if (existingMemberId) {
+        const { error: updateError } = await supabaseAdmin
+          .from("members")
+          .update(memberData)
+          .eq("id", existingMemberId);
+
+        if (updateError) {
+          return new Response(
+            JSON.stringify({ error: `Üye kaydı güncellenemedi: ${updateError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, message: `${full_name} başarıyla güncellendi` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else {
+        const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+
+        if (insertError) {
+          return new Response(
+            JSON.stringify({ error: `Üye kaydı oluşturulamadı: ${insertError.message}` }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi` }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
   } catch (error) {
     return new Response(
