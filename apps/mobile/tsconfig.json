@@ -3,17 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@dernek/core": [
-        "../../packages/core/src/index.ts"
-      ],
-      "@/*": [
-        "./src/*"
-      ]
+      "@dernek/core": ["../../packages/core/src/index.ts"],
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    ".expo/types/**/*.d.ts"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.d.ts", "expo-env.d.ts"]
 }
