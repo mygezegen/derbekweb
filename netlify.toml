@@ -1,6 +1,7 @@
 [build]
+base = "apps/web"
 publish = "dist"
-command = "npx vite build"
+command = "npm install && npm run build"
 
 [[redirects]]
 from = "/*"
