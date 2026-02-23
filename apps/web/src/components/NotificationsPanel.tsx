@@ -122,7 +122,66 @@ export function NotificationsPanel() {
           throw new Error('Telefon numarası bulunan alıcı yok');
         }
       } else {
-        setSuccess(`E-posta bildirimi oluşturuldu. ${recipientIds.length} alıcıya gönderilecek.`);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Oturum bulunamadı');
+
+        const recipientMembers = members.filter(m => recipientIds.includes(m.id));
+        const emailRecipients = recipientMembers.filter(m => m.email && m.email.trim().length > 0);
+
+        if (emailRecipients.length === 0) {
+          throw new Error('E-posta adresi bulunan alıcı yok');
+        }
+
+        const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`;
+        let sentCount = 0;
+        let failCount = 0;
+
+        for (const member of emailRecipients) {
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                to: member.email,
+                subject: notificationTitle,
+                html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+                  <h2 style="color: #1f2937;">${notificationTitle}</h2>
+                  <div style="color: #4b5563; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${notificationMessage}</div>
+                  <hr style="margin-top: 32px; border-color: #e5e7eb;" />
+                  <p style="color: #9ca3af; font-size: 12px;">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</p>
+                </div>`,
+                recipient_name: member.full_name,
+              }),
+            });
+
+            if (response.ok) {
+              sentCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+        }
+
+        await supabase
+          .from('notifications')
+          .update({ status: failCount === emailRecipients.length ? 'failed' : 'sent' })
+          .eq('id', notification.id);
+
+        await supabase
+          .from('notification_recipients')
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
+          .eq('notification_id', notification.id);
+
+        if (failCount > 0 && sentCount === 0) {
+          throw new Error(`E-postalar gönderilemedi. Lütfen SMTP ayarlarınızı kontrol edin.`);
+        }
+
+        setSuccess(`E-posta başarıyla gönderildi. ${sentCount} alıcıya ulaştı.${failCount > 0 ? ` ${failCount} gönderilemedi.` : ''}`);
       }
 
       setNotificationTitle('');

@@ -42,13 +42,11 @@ Deno.serve(async (req: Request) => {
       throw new Error('SMTP ayarları yapılandırılmamış. Lütfen yönetici panelinden SMTP ayarlarını yapılandırın.');
     }
 
-    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://association-app-deve-qlaf.bolt.host';
-
     const { data: resetData, error: resetError } = await supabaseClient.auth.admin.generateLink({
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${origin}/reset-password`,
+        redirectTo: 'https://caybasi.org/reset-password',
       },
     });
 
