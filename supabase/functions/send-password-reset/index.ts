@@ -62,7 +62,10 @@ Deno.serve(async (req: Request) => {
       throw new Error('Şifre sıfırlama bağlantısı oluşturulamadı');
     }
 
-    const resetUrl = resetData.properties.action_link;
+    const rawActionLink = resetData.properties.action_link;
+    const actionUrl = new URL(rawActionLink);
+    actionUrl.searchParams.set('redirect_to', appUrl);
+    const resetUrl = actionUrl.toString();
 
     const { data: member } = await supabaseClient
       .from('members')
