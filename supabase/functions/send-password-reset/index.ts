@@ -10,6 +10,7 @@ const corsHeaders = {
 
 interface PasswordResetRequest {
   email: string;
+  redirectTo?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -21,10 +22,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://caybasi.org';
-    const appUrl = origin.startsWith('http') ? origin : `https://${origin}`;
+    const { email, redirectTo }: PasswordResetRequest = await req.json();
 
-    const { email }: PasswordResetRequest = await req.json();
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://caybasi.org';
+    const appUrl = redirectTo || `${origin.startsWith('http') ? origin : `https://${origin}`}/reset-password`;
 
     if (!email) {
       throw new Error('E-posta adresi gereklidir');
@@ -49,7 +50,7 @@ Deno.serve(async (req: Request) => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: `${appUrl}/reset-password`,
+        redirectTo: appUrl,
       },
     });
 

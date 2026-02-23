@@ -53,6 +53,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
         },
         body: JSON.stringify({
           email: email,
+          redirectTo: `${window.location.origin}/reset-password`,
         })
       });
 
