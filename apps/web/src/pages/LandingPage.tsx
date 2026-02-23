@@ -44,6 +44,7 @@ interface ContactInfo {
   address: string;
   phone: string;
   email: string;
+  whatsapp_number?: string;
   social_media?: {
     facebook?: string;
     youtube?: string;
@@ -506,8 +507,9 @@ export default function LandingPage() {
         />
       )}
 
+      {(contactInfo?.whatsapp_number || '905322834038') && (
       <a
-        href="https://wa.me/905322834038?text=Size%20www.caybasi.org%20%C3%BCzerinden%20ula%C5%9F%C4%B1yorum"
+        href={`https://wa.me/${contactInfo?.whatsapp_number || '905322834038'}?text=Size%20www.caybasi.org%20%C3%BCzerinden%20ula%C5%9F%C4%B1yorum`}
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 group"
@@ -526,6 +528,7 @@ export default function LandingPage() {
           </div>
         </div>
       </a>
+      )}
 
       <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-8">
         <div className="container mx-auto px-4 text-center">

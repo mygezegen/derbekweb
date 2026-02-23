@@ -179,6 +179,7 @@ export interface ContactInfo {
   address?: string;
   social_media?: Record<string, string>;
   bank_accounts?: BankAccount[];
+  whatsapp_number?: string;
   updated_by?: string;
   created_at: string;
   updated_at: string;

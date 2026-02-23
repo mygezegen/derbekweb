@@ -77,6 +77,7 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
           address: editedContact.address,
           social_media: editedContact.social_media,
           bank_accounts: editedContact.bank_accounts || [],
+          whatsapp_number: editedContact.whatsapp_number,
         })
         .eq('id', contactInfo.id);
 
@@ -225,6 +226,19 @@ export function ContactManagement({ isAdmin }: ContactManagementProps) {
                 onChange={(e) => setEditedContact({ ...editedContact, phone: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                WhatsApp Numarası
+              </label>
+              <input
+                type="text"
+                value={editedContact.whatsapp_number || ''}
+                onChange={(e) => setEditedContact({ ...editedContact, whatsapp_number: e.target.value })}
+                placeholder="905321234567 (başında + olmadan)"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Ülke kodu dahil, boşluk ve + işareti olmadan girin. Örnek: 905321234567</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
