@@ -21,6 +21,9 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://caybasi.org';
+    const appUrl = origin.startsWith('http') ? origin : `https://${origin}`;
+
     const { email }: PasswordResetRequest = await req.json();
 
     if (!email) {
@@ -46,7 +49,7 @@ Deno.serve(async (req: Request) => {
       type: 'recovery',
       email: email,
       options: {
-        redirectTo: 'https://caybasi.org/reset-password',
+        redirectTo: `${appUrl}/reset-password`,
       },
     });
 
