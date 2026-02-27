@@ -55,7 +55,9 @@ export interface Event {
   id: string;
   title: string;
   description?: string;
-  event_date: string;
+  event_date?: string;
+  date?: string;
+  time?: string;
   location?: string;
   created_by: string;
   created_at: string;

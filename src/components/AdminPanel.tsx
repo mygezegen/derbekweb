@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Shield, Trash2, UserPlus, Download, Users, DollarSign } from 'lucide-react';
+import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
 import { AddMemberModal } from './AddMemberModal';
+import { SocialMediaConfiguration } from './SocialMediaConfiguration';
+import VerificationManagement from './VerificationManagement';
 
 interface AdminPanelProps {
   onRefresh: () => void;
 }
 
 export function AdminPanel({ onRefresh }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'members' | 'payments'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'social' | 'verification'>('members');
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -135,6 +137,30 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
               <span className="hidden sm:inline">Aidat Ödemeleri</span>
               <span className="sm:hidden">Ödeme</span>
             </button>
+            <button
+              onClick={() => setActiveTab('social')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'social'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Share2 size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Sosyal Medya</span>
+              <span className="sm:hidden">Sosyal</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('verification')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'verification'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <CheckCircle size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Kimlik Doğrulama</span>
+              <span className="sm:hidden">Doğrulama</span>
+            </button>
           </div>
         </div>
       </div>
@@ -236,6 +262,13 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
         <MemberDuesPayment />
       )}
 
+      {activeTab === 'social' && <SocialMediaConfiguration />}
+
+      {activeTab === 'verification' && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+          <VerificationManagement />
+        </div>
+      )}
     </div>
   );
 }

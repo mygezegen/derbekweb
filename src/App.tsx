@@ -8,6 +8,13 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Signup } from './pages/Signup';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+// Debug: Environment variables
+console.log('🔍 Supabase Config Check:', {
+  url: import.meta.env.VITE_SUPABASE_URL,
+  hasKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+  keyLength: import.meta.env.VITE_SUPABASE_ANON_KEY?.length
+});
+
 function MemberPortal() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Users, Plus, Edit2, Trash2, Save, X, Mail, Phone, Image as ImageIcon } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Save, X, Mail, Phone, Image as ImageIcon, Search, UserPlus } from 'lucide-react';
+import { Member } from '../types';
 
 interface BoardMember {
   id: string;
+  member_id?: string;
   full_name: string;
   position: string;
   email: string;
@@ -13,15 +15,21 @@ interface BoardMember {
   is_active: boolean;
 }
 
+type SelectionMode = 'choose' | 'member' | 'manual';
+
 export function BoardManagement() {
   const [members, setMembers] = useState<BoardMember[]>([]);
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingMember, setEditingMember] = useState<BoardMember | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>('choose');
+  const [searchQuery, setSearchQuery] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
     loadMembers();
+    loadAllMembers();
   }, []);
 
   const loadMembers = async () => {
@@ -39,6 +47,19 @@ export function BoardManagement() {
     }
   };
 
+  const loadAllMembers = async () => {
+    try {
+      const { data } = await supabase
+        .from('members')
+        .select('*')
+        .order('full_name', { ascending: true });
+
+      if (data) setAllMembers(data);
+    } catch (error) {
+      console.error('Üyeler yüklenirken hata:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!editingMember) return;
 
@@ -47,6 +68,7 @@ export function BoardManagement() {
         const { error } = await supabase
           .from('board_members')
           .update({
+            member_id: editingMember.member_id,
             full_name: editingMember.full_name,
             position: editingMember.position,
             email: editingMember.email,
@@ -63,6 +85,7 @@ export function BoardManagement() {
         const { error } = await supabase
           .from('board_members')
           .insert([{
+            member_id: editingMember.member_id,
             full_name: editingMember.full_name,
             position: editingMember.position,
             email: editingMember.email,
@@ -78,6 +101,8 @@ export function BoardManagement() {
       setMessage({ type: 'success', text: 'Yönetim kurulu üyesi başarıyla kaydedildi!' });
       setEditingMember(null);
       setIsAdding(false);
+      setSelectionMode('choose');
+      setSearchQuery('');
       loadMembers();
     } catch (error) {
       console.error('Kayıt hatası:', error);
@@ -105,18 +130,49 @@ export function BoardManagement() {
   };
 
   const startAdd = () => {
+    setSelectionMode('choose');
+    setSearchQuery('');
+    setEditingMember(null);
+    setIsAdding(true);
+  };
+
+  const selectMemberType = (mode: 'member' | 'manual') => {
+    setSelectionMode(mode);
+    if (mode === 'manual') {
+      setEditingMember({
+        id: 'new',
+        full_name: '',
+        position: '',
+        email: '',
+        phone: '',
+        photo_url: '',
+        display_order: members.length + 1,
+        is_active: true
+      });
+    }
+  };
+
+  const selectExistingMember = (member: Member) => {
     setEditingMember({
       id: 'new',
-      full_name: '',
+      member_id: member.id,
+      full_name: member.full_name,
       position: '',
-      email: '',
-      phone: '',
-      photo_url: '',
+      email: member.email || '',
+      phone: member.phone || '',
+      photo_url: member.photo_url || '',
       display_order: members.length + 1,
       is_active: true
     });
-    setIsAdding(true);
+    setSelectionMode('manual');
   };
+
+  const filteredMembers = allMembers.filter(
+    (member) =>
+      member.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      member.phone?.includes(searchQuery)
+  );
 
   if (loading) {
     return (
@@ -150,9 +206,111 @@ export function BoardManagement() {
         </div>
       )}
 
-      {isAdding && editingMember && (
+      {isAdding && selectionMode === 'choose' && (
         <div className="mb-6 bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Yeni Yönetim Kurulu Üyesi</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Yönetim Kurulu Üyesi Ekle</h3>
+          <p className="text-gray-600 mb-6">Üye listesinden seçim yapın veya manuel olarak girin:</p>
+          <div className="grid md:grid-cols-2 gap-4">
+            <button
+              onClick={() => selectMemberType('member')}
+              className="flex flex-col items-center justify-center p-6 bg-white border-2 border-emerald-300 rounded-lg hover:bg-emerald-50 hover:border-emerald-500 transition-all group"
+            >
+              <Users className="w-12 h-12 text-emerald-600 mb-3 group-hover:scale-110 transition-transform" />
+              <span className="text-lg font-semibold text-gray-800">Üye Listesinden Seç</span>
+              <span className="text-sm text-gray-500 mt-1">Kayıtlı üyelerden birini seçin</span>
+            </button>
+            <button
+              onClick={() => selectMemberType('manual')}
+              className="flex flex-col items-center justify-center p-6 bg-white border-2 border-blue-300 rounded-lg hover:bg-blue-50 hover:border-blue-500 transition-all group"
+            >
+              <UserPlus className="w-12 h-12 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
+              <span className="text-lg font-semibold text-gray-800">Manuel Giriş</span>
+              <span className="text-sm text-gray-500 mt-1">Bilgileri elle girin</span>
+            </button>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => { setIsAdding(false); setSelectionMode('choose'); }}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <X className="w-5 h-5 inline mr-1" />
+              İptal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isAdding && selectionMode === 'member' && (
+        <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Üye Seçin</h3>
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Üye ara (isim, e-posta, telefon)..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div className="max-h-96 overflow-y-auto space-y-2">
+            {filteredMembers.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Üye bulunamadı</p>
+              </div>
+            ) : (
+              filteredMembers.map((member) => (
+                <div
+                  key={member.id}
+                  onClick={() => selectExistingMember(member)}
+                  className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all"
+                >
+                  {member.photo_url ? (
+                    <img
+                      src={member.photo_url}
+                      alt={member.full_name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-blue-600" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-900">{member.full_name}</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {member.email && (
+                        <span className="text-xs text-gray-500">{member.email}</span>
+                      )}
+                      {member.phone && (
+                        <span className="text-xs text-gray-500">{member.phone}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setSelectionMode('choose')}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <X className="w-5 h-5 inline mr-1" />
+              Geri
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isAdding && selectionMode === 'manual' && editingMember && (
+        <div className="mb-6 bg-emerald-50 border-2 border-emerald-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            {editingMember.member_id ? 'Yönetim Kurulu Bilgileri' : 'Yeni Yönetim Kurulu Üyesi'}
+          </h3>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -243,11 +401,11 @@ export function BoardManagement() {
           </div>
           <div className="mt-4 flex justify-end space-x-3">
             <button
-              onClick={() => { setIsAdding(false); setEditingMember(null); }}
+              onClick={() => setSelectionMode('choose')}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               <X className="w-5 h-5 inline mr-1" />
-              İptal
+              Geri
             </button>
             <button
               onClick={handleSave}

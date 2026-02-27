@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { LogIn, Mail } from 'lucide-react';
+import { LogIn, Mail, CreditCard, Smartphone } from 'lucide-react';
+import { SMSPasswordReset } from '../components/SMSPasswordReset';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -9,12 +10,16 @@ interface LoginProps {
 
 export function Login({ onLoginSuccess }: LoginProps) {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [loginType, setLoginType] = useState<'email' | 'tc'>('email');
+  const [resetType, setResetType] = useState<'email' | 'tc'>('email');
+  const [showSmsReset, setShowSmsReset] = useState(false);
+  const [smsPhone, setSmsPhone] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,11 +27,43 @@ export function Login({ onLoginSuccess }: LoginProps) {
     setLoading(true);
 
     try {
+      let emailToUse = identifier;
+
+      if (loginType === 'tc') {
+        const tcNumber = identifier.replace(/\s/g, '');
+
+        if (tcNumber.length !== 11 || !/^\d+$/.test(tcNumber)) {
+          setError('Geçerli bir TC kimlik numarası giriniz (11 haneli).');
+          setLoading(false);
+          return;
+        }
+
+        const { data: member, error: memberError } = await supabase
+          .from('members')
+          .select('email')
+          .eq('tc_identity_no', tcNumber)
+          .maybeSingle();
+
+        if (memberError || !member) {
+          setError('Bu TC kimlik numarası ile kayıtlı kullanıcı bulunamadı.');
+          setLoading(false);
+          return;
+        }
+
+        emailToUse = member.email;
+      }
+
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: emailToUse,
         password,
       });
-      if (signInError) throw signInError;
+      if (signInError) {
+        if (loginType === 'tc') {
+          throw new Error('Giriş başarısız. TC kimlik numaranız ve şifrenizi kontrol edin.');
+        } else {
+          throw new Error('Giriş başarısız. E-posta ve şifrenizi kontrol edin.');
+        }
+      }
 
       onLoginSuccess();
       navigate('/app');
@@ -43,6 +80,34 @@ export function Login({ onLoginSuccess }: LoginProps) {
     setLoading(true);
 
     try {
+      let emailToUse = identifier;
+      let tcNumberToSend = undefined;
+
+      if (resetType === 'tc') {
+        const tcNumber = identifier.replace(/\s/g, '');
+
+        if (tcNumber.length !== 11 || !/^\d+$/.test(tcNumber)) {
+          setError('Geçerli bir TC kimlik numarası giriniz (11 haneli).');
+          setLoading(false);
+          return;
+        }
+
+        const { data: member, error: memberError } = await supabase
+          .from('members')
+          .select('email, phone')
+          .eq('tc_identity_no', tcNumber)
+          .maybeSingle();
+
+        if (memberError || !member) {
+          setError('Bu TC kimlik numarası ile kayıtlı kullanıcı bulunamadı.');
+          setLoading(false);
+          return;
+        }
+
+        emailToUse = member.email;
+        tcNumberToSend = tcNumber;
+      }
+
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-password-reset`;
 
       const response = await fetch(apiUrl, {
@@ -52,7 +117,8 @@ export function Login({ onLoginSuccess }: LoginProps) {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
-          email: email,
+          email: emailToUse,
+          tcNumber: tcNumberToSend,
           redirectTo: `${window.location.origin}/reset-password`,
         })
       });
@@ -60,16 +126,36 @@ export function Login({ onLoginSuccess }: LoginProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Şifre sıfırlama e-postası gönderilemedi');
+        throw new Error(result.error || 'Şifre sıfırlama gönderilemedi');
       }
 
-      setResetEmailSent(true);
+      if (result.resetType === 'sms') {
+        setSmsPhone(result.phoneNumber);
+        setShowSmsReset(true);
+      } else {
+        setResetEmailSent(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Şifre sıfırlama e-postası gönderilemedi');
     } finally {
       setLoading(false);
     }
   };
+
+  if (showSmsReset) {
+    return (
+      <SMSPasswordReset
+        phoneNumber={smsPhone}
+        onBack={() => {
+          setShowSmsReset(false);
+          setShowForgotPassword(false);
+          setSmsPhone('');
+          setIdentifier('');
+          setError('');
+        }}
+      />
+    );
+  }
 
   if (showForgotPassword) {
     return (
@@ -111,6 +197,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
                   Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen e-postanızı kontrol edin ve
                   bağlantıya tıklayarak yeni şifrenizi oluşturun.
                 </p>
+                <p className="text-xs text-emerald-600 mt-2 font-semibold">
+                  Bağlantı 1 saat geçerlidir.
+                </p>
               </div>
               <button
                 onClick={() => {
@@ -125,9 +214,19 @@ export function Login({ onLoginSuccess }: LoginProps) {
             </div>
           ) : (
             <>
-              <p className="text-gray-600 text-center mb-6 text-sm">
-                E-posta adresinizi girin, size şifre sıfırlama bağlantısı gönderelim.
-              </p>
+              <div className="bg-emerald-50 border-l-4 border-emerald-500 px-4 py-4 rounded-lg mb-6 shadow-sm">
+                <h3 className="font-semibold text-emerald-800 mb-2 text-sm flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Şifre Sıfırlama Yöntemi
+                </h3>
+                <p className="text-emerald-700 text-xs leading-relaxed">
+                  <strong>E-posta:</strong> Gerçek e-posta adresiniz varsa, şifre sıfırlama bağlantısı e-postanıza gönderilir.
+                  <br /><br />
+                  <strong>SMS:</strong> E-postanız geçersizse (@uye.local gibi), kayıtlı telefon numaranıza 6 haneli SMS kodu gönderilir. Kod 30 dakika geçerlidir.
+                </p>
+              </div>
 
               {error && (
                 <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6 shadow-sm">
@@ -138,15 +237,56 @@ export function Login({ onLoginSuccess }: LoginProps) {
               <form onSubmit={handleForgotPassword} className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    E-posta
+                    Sıfırlama Yöntemi Seçin
+                  </label>
+                  <div className="flex gap-3 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetType('email');
+                        setIdentifier('');
+                        setError('');
+                      }}
+                      className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        resetType === 'email'
+                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Mail size={18} />
+                      E-posta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResetType('tc');
+                        setIdentifier('');
+                        setError('');
+                      }}
+                      className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        resetType === 'tc'
+                          ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <CreditCard size={18} />
+                      TC Kimlik
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {resetType === 'email' ? 'E-posta' : 'TC Kimlik Numarası'}
                   </label>
                   <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    type={resetType === 'email' ? 'email' : 'text'}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
                     required
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
-                    placeholder="ornek@email.com"
+                    placeholder={resetType === 'email' ? 'ornek@email.com' : '12345678901'}
+                    maxLength={resetType === 'tc' ? 11 : undefined}
                   />
                 </div>
 
@@ -203,6 +343,20 @@ export function Login({ onLoginSuccess }: LoginProps) {
           </p>
         </div>
 
+        <div className="bg-emerald-50 border-l-4 border-emerald-500 px-4 py-4 rounded-lg mb-6 shadow-sm">
+          <h3 className="font-semibold text-emerald-800 mb-2 text-sm flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Giriş Yöntemi Seçimi
+          </h3>
+          <p className="text-emerald-700 text-xs leading-relaxed">
+            <strong>E-posta ile Giriş:</strong> Kayıt sırasında kullandığınız e-posta adresiniz ve şifreniz ile giriş yapabilirsiniz.
+            <br /><br />
+            <strong>TC Kimlik No ile Giriş:</strong> E-postanızı hatırlamıyorsanız, 11 haneli TC kimlik numaranız ve şifreniz ile de giriş yapabilirsiniz. Sistem otomatik olarak TC kimlik numaranıza kayıtlı e-posta adresinizi bulacaktır.
+          </p>
+        </div>
+
         {error && (
           <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6 shadow-sm">
             <p className="text-sm font-medium">{error}</p>
@@ -212,16 +366,66 @@ export function Login({ onLoginSuccess }: LoginProps) {
         <form onSubmit={handleAuth} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              E-posta
+              Giriş Yöntemi Seçin
+            </label>
+            <div className="flex gap-3 mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('email');
+                  setIdentifier('');
+                  setError('');
+                }}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  loginType === 'email'
+                    ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Mail size={18} />
+                E-posta
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginType('tc');
+                  setIdentifier('');
+                  setError('');
+                }}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  loginType === 'tc'
+                    ? 'bg-gradient-to-r from-emerald-600 to-green-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <CreditCard size={18} />
+                TC Kimlik
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              {loginType === 'email' ? 'E-posta' : 'TC Kimlik Numarası'}
             </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type={loginType === 'email' ? 'email' : 'text'}
+              value={identifier}
+              onChange={(e) => {
+                if (loginType === 'tc') {
+                  const value = e.target.value.replace(/\D/g, '');
+                  setIdentifier(value.slice(0, 11));
+                } else {
+                  setIdentifier(e.target.value);
+                }
+              }}
               required
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
-              placeholder="ornek@email.com"
+              placeholder={loginType === 'email' ? 'ornek@email.com' : '12345678901'}
             />
+            {loginType === 'tc' && (
+              <p className="text-xs text-gray-500 mt-1">11 haneli TC kimlik numaranızı giriniz</p>
+            )}
           </div>
 
           <div>

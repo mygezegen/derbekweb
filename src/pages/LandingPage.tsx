@@ -19,6 +19,7 @@ interface Event {
   description: string;
   event_date: string;
   location: string;
+  image_url?: string;
 }
 
 interface GalleryItem {
@@ -391,7 +392,7 @@ export default function LandingPage() {
             <h2 className="text-3xl font-bold text-gray-800">Dernek Yönetimimiz</h2>
           </div>
           {boardMembers.length > 0 ? (
-            <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
               {boardMembers.map((member) => (
                 <div
                   key={member.id}

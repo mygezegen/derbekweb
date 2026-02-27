@@ -18,7 +18,12 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* Monorepo path resolution */
+    "paths": {
+      "@dernek/core": ["../../packages/core/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

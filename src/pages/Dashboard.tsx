@@ -19,6 +19,7 @@ import { EmailTemplates } from '../components/EmailTemplates';
 import { TreasuryManagement } from '../components/TreasuryManagement';
 import { NotificationsPanel } from '../components/NotificationsPanel';
 import { SMSConfiguration } from '../components/SMSConfiguration';
+import EmailVerificationCheck from '../components/EmailVerificationCheck';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -194,6 +195,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   });
 
   return (
+    <EmailVerificationCheck>
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="bg-gradient-to-r from-red-600 to-red-700 shadow-lg sticky top-0 z-50 border-b-4 border-green-600">
         <div className="px-4 py-3 md:py-4 flex items-center justify-between gap-3">
@@ -504,5 +506,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
         </main>
       </div>
     </div>
+    </EmailVerificationCheck>
   );
 }

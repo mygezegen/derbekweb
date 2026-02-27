@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Gallery, GalleryImage, Member } from '../types';
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload, Video, Instagram, Facebook } from 'lucide-react';
+import { Plus, Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload, Video, Instagram, Facebook, Share2 } from 'lucide-react';
 import { logAction } from '../lib/auditLog';
 import { MediaRenderer } from './MediaRenderer';
 import { GalleryModal } from './GalleryModal';
+import { SocialMediaFeed } from './SocialMediaFeed';
 
 interface GalleryManagementProps {
   currentMember: Member;
@@ -18,6 +19,7 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
   const [showGalleryForm, setShowGalleryForm] = useState(false);
   const [showImageForm, setShowImageForm] = useState(false);
   const [showBulkImageForm, setShowBulkImageForm] = useState(false);
+  const [showSocialFeed, setShowSocialFeed] = useState(false);
   const [editingGallery, setEditingGallery] = useState<Gallery | null>(null);
   const [loading, setLoading] = useState(true);
   const [bulkUploadProgress, setBulkUploadProgress] = useState<string>('');
@@ -251,6 +253,64 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
     setShowGalleryForm(true);
   };
 
+  const handleAddSocialPostsToGallery = async (posts: any[]) => {
+    if (!selectedGallery) {
+      alert('Lütfen önce bir galeri seçin');
+      return;
+    }
+
+    try {
+      const maxOrder = galleryImages.length > 0
+        ? Math.max(...galleryImages.map(img => img.display_order))
+        : -1;
+
+      const imagesToInsert = posts.map((post, index) => {
+        let media_type: 'image' | 'youtube' | 'instagram' | 'facebook' = 'image';
+        let video_url = post.url;
+
+        if (post.platform === 'youtube') {
+          media_type = 'youtube';
+        } else if (post.platform === 'instagram') {
+          media_type = 'instagram';
+        } else if (post.platform === 'facebook') {
+          media_type = 'facebook';
+        }
+
+        return {
+          gallery_id: selectedGallery.id,
+          media_type,
+          video_url,
+          image_url: '',
+          caption: post.caption || '',
+          display_order: maxOrder + index + 1,
+          created_by: currentMember.id
+        };
+      });
+
+      const { error } = await supabase
+        .from('gallery_images')
+        .insert(imagesToInsert);
+
+      if (error) throw error;
+
+      await logAction(
+        currentMember.id,
+        'create',
+        'gallery_images',
+        undefined,
+        undefined,
+        { count: posts.length, gallery_id: selectedGallery.id, source: 'social_media' }
+      );
+
+      alert(`${posts.length} sosyal medya gönderisi başarıyla eklendi!`);
+      setShowSocialFeed(false);
+      loadGalleryImages(selectedGallery.id);
+    } catch (error) {
+      console.error('Error adding social posts:', error);
+      alert('Gönderiler eklenirken hata oluştu');
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Yükleniyor...</div>;
   }
@@ -260,24 +320,41 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">Galeri</h2>
         {isAdmin && (
-          <button
-            onClick={() => {
-              setShowGalleryForm(!showGalleryForm);
-              setEditingGallery(null);
-              setGalleryFormData({
-                title: '',
-                description: '',
-                is_public: false,
-                cover_image_url: ''
-              });
-            }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={20} />
-            Yeni Galeri
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSocialFeed(!showSocialFeed)}
+              className="flex items-center gap-2 bg-gradient-to-r from-pink-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-pink-700 hover:to-blue-700 transition-colors"
+            >
+              <Share2 size={20} />
+              Sosyal Medyadan Ekle
+            </button>
+            <button
+              onClick={() => {
+                setShowGalleryForm(!showGalleryForm);
+                setEditingGallery(null);
+                setGalleryFormData({
+                  title: '',
+                  description: '',
+                  is_public: false,
+                  cover_image_url: ''
+                });
+              }}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus size={20} />
+              Yeni Galeri
+            </button>
+          </div>
         )}
       </div>
+
+      {showSocialFeed && (
+        <SocialMediaFeed
+          currentMember={currentMember}
+          isAdmin={isAdmin}
+          onAddToGallery={handleAddSocialPostsToGallery}
+        />
+      )}
 
       {isAdmin && showGalleryForm && (
         <div className="bg-white rounded-lg shadow p-6">

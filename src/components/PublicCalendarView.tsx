@@ -7,6 +7,7 @@ interface Event {
   description: string;
   event_date: string;
   location: string;
+  image_url?: string;
 }
 
 interface PublicCalendarViewProps {
@@ -17,6 +18,7 @@ export function PublicCalendarView({ events }: PublicCalendarViewProps) {
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -163,7 +165,8 @@ export function PublicCalendarView({ events }: PublicCalendarViewProps) {
                 {upcomingEvents.map(event => (
                   <div
                     key={event.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden"
+                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
+                    onClick={() => setSelectedEvent(event)}
                   >
                     <div className="flex">
                       <div className="bg-gradient-to-b from-emerald-500 to-green-600 text-white flex flex-col items-center justify-center px-4 py-4 min-w-[72px]">
@@ -215,7 +218,8 @@ export function PublicCalendarView({ events }: PublicCalendarViewProps) {
                 {pastEvents.map(event => (
                   <div
                     key={event.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden opacity-70"
+                    className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden opacity-70 cursor-pointer"
+                    onClick={() => setSelectedEvent(event)}
                   >
                     <div className="flex">
                       <div className="bg-gradient-to-b from-gray-400 to-gray-500 text-white flex flex-col items-center justify-center px-4 py-4 min-w-[72px]">
@@ -330,6 +334,61 @@ export function PublicCalendarView({ events }: PublicCalendarViewProps) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setSelectedEvent(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-gradient-to-r from-emerald-600 to-green-600 text-white p-6 rounded-t-2xl flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold mb-2">{selectedEvent.title}</h2>
+                <div className="flex flex-wrap items-center gap-4 text-emerald-100">
+                  <span className="flex items-center gap-2">
+                    <Calendar size={18} />
+                    {formatFullDate(selectedEvent.event_date)}
+                  </span>
+                  {selectedEvent.location && (
+                    <span className="flex items-center gap-2">
+                      <MapPin size={18} />
+                      {selectedEvent.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {(selectedEvent as any).image_url && (
+                <div className="mb-6 rounded-xl overflow-hidden shadow-lg">
+                  <img
+                    src={(selectedEvent as any).image_url}
+                    alt={selectedEvent.title}
+                    className="w-full h-auto object-cover max-h-96"
+                  />
+                </div>
+              )}
+
+              {selectedEvent.description && (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-1 h-6 bg-emerald-500 rounded"></div>
+                    Etkinlik Detayları
+                  </h3>
+                  <div
+                    className="text-gray-700 leading-relaxed announcement-content prose prose-emerald max-w-none"
+                    dangerouslySetInnerHTML={{ __html: selectedEvent.description }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

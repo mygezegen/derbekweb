@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import nodemailer from 'npm:nodemailer@6.9.8';
+import { createHash } from 'node:crypto';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,18 @@ const corsHeaders = {
 interface PasswordResetRequest {
   email: string;
   redirectTo?: string;
+  tcNumber?: string;
+}
+
+// Check if email is a valid external email
+function isValidExternalEmail(email: string): boolean {
+  const invalidDomains = ['@uye.local'];
+  return !invalidDomains.some(domain => email.toLowerCase().endsWith(domain));
+}
+
+// Generate 6-digit code
+function generateResetCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 Deno.serve(async (req: Request) => {
@@ -22,10 +35,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { email, redirectTo }: PasswordResetRequest = await req.json();
+    const { email, redirectTo, tcNumber }: PasswordResetRequest = await req.json();
 
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://caybasi.org';
     const appUrl = redirectTo || `${origin.startsWith('http') ? origin : `https://${origin}`}/reset-password`;
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 
     if (!email) {
       throw new Error('E-posta adresi gereklidir');
@@ -35,6 +49,119 @@ Deno.serve(async (req: Request) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
+
+    // Get member info with phone
+    // If tcNumber provided, use it to get member info (more reliable)
+    let member;
+    if (tcNumber) {
+      const { data: memberData } = await supabaseClient
+        .from('members')
+        .select('id, full_name, phone, auth_id, email')
+        .eq('tc_identity_no', tcNumber)
+        .maybeSingle();
+      member = memberData;
+    } else {
+      const { data: memberData } = await supabaseClient
+        .from('members')
+        .select('id, full_name, phone, auth_id')
+        .eq('email', email)
+        .maybeSingle();
+      member = memberData;
+    }
+
+    if (!member) {
+      if (tcNumber) {
+        throw new Error('Bu TC kimlik numarası ile kayıtlı kullanıcı bulunamadı');
+      } else {
+        throw new Error('Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı');
+      }
+    }
+
+    if (!member.auth_id) {
+      throw new Error('Bu kullanıcı henüz sisteme giriş yapmamış. Lütfen önce kayıt olun veya yönetici ile iletişime geçin.');
+    }
+
+    // Check if user can request password reset (30 min limit)
+    const { data: canRequest } = await supabaseClient
+      .rpc('can_request_password_reset', {
+        p_user_id: member.auth_id,
+        p_reset_type: isValidExternalEmail(email) ? 'email' : 'sms'
+      });
+
+    if (!canRequest) {
+      throw new Error('Son şifre sıfırlama talebinizden sonra 30 dakika geçmesi gerekiyor. Lütfen daha sonra tekrar deneyin.');
+    }
+
+    const recipientName = member.full_name || email;
+
+    // Check if email is valid for external delivery
+    if (!isValidExternalEmail(email)) {
+      // Use SMS instead
+      if (!member.phone) {
+        throw new Error('Hesabınızda kayıtlı telefon numarası bulunamadı. Lütfen yönetici ile iletişime geçin.');
+      }
+
+      // Generate 6-digit code
+      const resetCode = generateResetCode();
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+      // Save reset token
+      const { error: tokenError } = await supabaseClient
+        .from('password_reset_tokens')
+        .insert({
+          user_id: member.auth_id,
+          token_hash: createHash('sha256').update(resetCode).digest('hex'),
+          reset_type: 'sms',
+          reset_code: resetCode,
+          phone_number: member.phone,
+          expires_at: expiresAt.toISOString(),
+          send_count: 1,
+          last_sent_at: new Date().toISOString(),
+          ip_address: ipAddress,
+        });
+
+      if (tokenError) {
+        console.error('Token kayıt hatası:', tokenError);
+        throw new Error('Şifre sıfırlama kodu oluşturulamadı');
+      }
+
+      // Send SMS
+      const smsApiUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`;
+
+      const smsResponse = await fetch(smsApiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+        },
+        body: JSON.stringify({
+          to: member.phone,
+          message: `Çaybaşı Köyü Derneği - Şifre Sıfırlama Kodunuz: ${resetCode}\n\nBu kod 30 dakika geçerlidir. Kodu kimseyle paylaşmayın.`,
+        })
+      });
+
+      if (!smsResponse.ok) {
+        const smsError = await smsResponse.json();
+        throw new Error(`SMS gönderilemedi: ${smsError.error || 'Bilinmeyen hata'}`);
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          resetType: 'sms',
+          message: 'Şifre sıfırlama kodu telefon numaranıza SMS ile gönderildi',
+          phoneNumber: member.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), // Mask phone
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+    }
+
+    // Email path - original code continues below
 
     const { data: smtpSettings } = await supabaseClient
       .from('smtp_settings')
@@ -67,13 +194,6 @@ Deno.serve(async (req: Request) => {
     actionUrl.searchParams.set('redirect_to', appUrl);
     const resetUrl = actionUrl.toString();
 
-    const { data: member } = await supabaseClient
-      .from('members')
-      .select('full_name')
-      .eq('email', email)
-      .maybeSingle();
-
-    const recipientName = member?.full_name || email;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -204,6 +324,7 @@ Saygılarımızla,
       return new Response(
         JSON.stringify({
           success: true,
+          resetType: 'email',
           message: 'Şifre sıfırlama e-postası başarıyla gönderildi'
         }),
         {

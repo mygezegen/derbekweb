@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Event, EventParticipant } from '../types';
-import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays, Image as ImageIcon, FileText } from 'lucide-react';
+import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays, Image as ImageIcon, FileText, Edit } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
@@ -33,6 +33,8 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
   const [showParticipantReport, setShowParticipantReport] = useState(false);
   const [reportEventId, setReportEventId] = useState<string | null>(null);
   const [eventParticipants, setEventParticipants] = useState<any[]>([]);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     loadCurrentMember();
@@ -310,6 +312,103 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
       setShowParticipantReport(true);
     } catch (error) {
       console.error('Error loading event participants:', error);
+    }
+  };
+
+  const handleEditEvent = (event: Event) => {
+    setEditingEvent(event);
+    const eventDateTime = new Date(event.event_date);
+    setTitle(event.title);
+    setDescription(event.description);
+    setLocation(event.location || '');
+    setEventDate(eventDateTime.toISOString().split('T')[0]);
+    setEventTime(eventDateTime.toTimeString().slice(0, 5));
+    setImagePreview((event as any).image_url || '');
+    setShowEditModal(true);
+  };
+
+  const handleUpdateEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEvent) return;
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const fullDateTime = new Date(`${eventDate}T${eventTime}`).toISOString();
+
+      let imageUrl = (editingEvent as any).image_url || '';
+      let imagePublicId = (editingEvent as any).image_public_id || '';
+
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `events/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+        imagePublicId = filePath;
+
+        // Delete old image if exists
+        if ((editingEvent as any).image_public_id) {
+          await supabase.storage
+            .from('images')
+            .remove([(editingEvent as any).image_public_id]);
+        }
+      }
+
+      const { error: updateError } = await supabase
+        .from('events')
+        .update({
+          title,
+          description,
+          event_date: fullDateTime,
+          location,
+          image_url: imageUrl || undefined,
+          image_public_id: imagePublicId || undefined,
+        })
+        .eq('id', editingEvent.id);
+
+      if (updateError) throw updateError;
+
+      const logMemberId = await getCurrentMemberId();
+      if (logMemberId) {
+        await logAction(logMemberId, 'update', 'events', editingEvent.id, {
+          title: editingEvent.title,
+          description: editingEvent.description,
+          event_date: editingEvent.event_date,
+          location: editingEvent.location
+        }, {
+          title,
+          description,
+          event_date: fullDateTime,
+          location
+        });
+      }
+
+      setTitle('');
+      setDescription('');
+      setEventDate('');
+      setEventTime('');
+      setLocation('');
+      setImageFile(null);
+      setImagePreview('');
+      setShowEditModal(false);
+      setEditingEvent(null);
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating event');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -708,12 +807,22 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                       </div>
                     </div>
                     {isAdmin && (
-                      <button
-                        onClick={() => handleDeleteEvent(event.id)}
-                        className="ml-4 text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        <Trash2 size={20} />
-                      </button>
+                      <div className="ml-4 flex gap-2">
+                        <button
+                          onClick={() => handleEditEvent(event)}
+                          className="text-blue-500 hover:text-blue-700 transition-colors"
+                          title="Düzenle"
+                        >
+                          <Edit size={20} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteEvent(event.id)}
+                          className="text-red-500 hover:text-red-700 transition-colors"
+                          title="Sil"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -754,12 +863,22 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                     )}
                   </div>
                   {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="ml-4 text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="ml-4 flex gap-2">
+                      <button
+                        onClick={() => handleEditEvent(event)}
+                        className="text-blue-500 hover:text-blue-700 transition-colors"
+                        title="Düzenle"
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                        title="Sil"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -774,6 +893,162 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
         </div>
       )}
         </>
+      )}
+
+      {showEditModal && editingEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => {
+          setShowEditModal(false);
+          setEditingEvent(null);
+          setTitle('');
+          setDescription('');
+          setEventDate('');
+          setEventTime('');
+          setLocation('');
+          setImageFile(null);
+          setImagePreview('');
+          setError('');
+        }}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-blue-600 text-white p-6 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-2xl font-bold">Etkinliği Düzenle</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingEvent(null);
+                  setTitle('');
+                  setDescription('');
+                  setEventDate('');
+                  setEventTime('');
+                  setLocation('');
+                  setImageFile(null);
+                  setImagePreview('');
+                  setError('');
+                }}
+                className="text-white hover:bg-blue-700 p-2 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEvent} className="p-6">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                  {error}
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Başlık
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Etkinlik başlığı"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Konum
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Etkinlik konumu"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tarih
+                  </label>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Saat
+                  </label>
+                  <input
+                    type="time"
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Açıklama
+                </label>
+                <HTMLEditor
+                  value={description}
+                  onChange={setDescription}
+                  placeholder="Etkinlik açıklaması yazın..."
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Etkinlik Görseli
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Önizleme"
+                      className="max-w-xs rounded-lg border border-gray-300"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+                >
+                  {loading ? 'Güncelleniyor...' : 'Güncelle'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingEvent(null);
+                    setTitle('');
+                    setDescription('');
+                    setEventDate('');
+                    setEventTime('');
+                    setLocation('');
+                    setImageFile(null);
+                    setImagePreview('');
+                    setError('');
+                  }}
+                  className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                >
+                  İptal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

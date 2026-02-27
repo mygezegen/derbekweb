@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { copyFileSync, readdirSync, statSync, mkdirSync, existsSync } from 'fs';
-import { join, basename } from 'path';
+import { join, resolve } from 'path';
 
 function copyPublicDirSafe() {
   return {
@@ -94,6 +94,11 @@ export default defineConfig({
       }
     })
   ],
+  resolve: {
+    alias: {
+      '@dernek/core': resolve(__dirname, './packages/core/src/index.ts'),
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

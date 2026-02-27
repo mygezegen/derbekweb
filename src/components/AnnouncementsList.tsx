@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Announcement } from '../types';
-import { Trash2, Plus, Clock } from 'lucide-react';
+import { Trash2, Plus, Clock, Edit, X } from 'lucide-react';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
 
@@ -18,6 +18,8 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const handleCreateAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +66,67 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
       onRefresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error creating announcement');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditAnnouncement = (announcement: Announcement) => {
+    setEditingAnnouncement(announcement);
+    setTitle(announcement.title);
+    setContent(announcement.content);
+    if (announcement.expires_at) {
+      const date = new Date(announcement.expires_at);
+      const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setExpiresAt(localDateTime);
+    } else {
+      setExpiresAt('');
+    }
+    setShowEditModal(true);
+  };
+
+  const handleUpdateAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAnnouncement) return;
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const { error: updateError } = await supabase
+        .from('announcements')
+        .update({
+          title,
+          content,
+          expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        })
+        .eq('id', editingAnnouncement.id);
+
+      if (updateError) throw updateError;
+
+      const logMemberId = await getCurrentMemberId();
+      if (logMemberId) {
+        await logAction(logMemberId, 'update', 'announcements', editingAnnouncement.id, {
+          title: editingAnnouncement.title,
+          content: editingAnnouncement.content,
+          expires_at: editingAnnouncement.expires_at
+        }, {
+          title,
+          content,
+          expires_at: expiresAt
+        });
+      }
+
+      setTitle('');
+      setContent('');
+      setExpiresAt('');
+      setShowEditModal(false);
+      setEditingAnnouncement(null);
+      onRefresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating announcement');
     } finally {
       setLoading(false);
     }
@@ -228,12 +291,22 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
                     </div>
                   </div>
                   {isAdmin && (
-                    <button
-                      onClick={() => handleDeleteAnnouncement(announcement.id)}
-                      className="ml-4 text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="ml-4 flex gap-2">
+                      <button
+                        onClick={() => handleEditAnnouncement(announcement)}
+                        className="text-blue-500 hover:text-blue-700 transition-colors"
+                        title="Düzenle"
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAnnouncement(announcement.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                        title="Sil"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -277,12 +350,22 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
                       )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteAnnouncement(announcement.id)}
-                    className="ml-4 text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    <Trash2 size={20} />
-                  </button>
+                  <div className="ml-4 flex gap-2">
+                    <button
+                      onClick={() => handleEditAnnouncement(announcement)}
+                      className="text-blue-500 hover:text-blue-700 transition-colors"
+                      title="Düzenle"
+                    >
+                      <Edit size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAnnouncement(announcement.id)}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                      title="Sil"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -293,6 +376,105 @@ export function AnnouncementsList({ announcements, isAdmin, onRefresh }: Announc
       {announcements.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-600">Henüz duyuru yok</p>
+        </div>
+      )}
+
+      {showEditModal && editingAnnouncement && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => {
+          setShowEditModal(false);
+          setEditingAnnouncement(null);
+          setTitle('');
+          setContent('');
+          setExpiresAt('');
+          setError('');
+        }}>
+          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-blue-600 text-white p-6 rounded-t-lg flex items-center justify-between">
+              <h3 className="text-2xl font-bold">Duyuruyu Düzenle</h3>
+              <button
+                onClick={() => {
+                  setShowEditModal(false);
+                  setEditingAnnouncement(null);
+                  setTitle('');
+                  setContent('');
+                  setExpiresAt('');
+                  setError('');
+                }}
+                className="text-white hover:bg-blue-700 p-2 rounded-lg transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateAnnouncement} className="p-6">
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                  {error}
+                </div>
+              )}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Başlık
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Duyuru başlığı"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  İçerik
+                </label>
+                <HTMLEditor
+                  value={content}
+                  onChange={setContent}
+                  placeholder="Duyuru içeriği yazın..."
+                  required
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bitiş Tarihi (Opsiyonel)
+                </label>
+                <input
+                  type="datetime-local"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Duyuru bu tarihten sonra otomatik olarak sona erecek
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-medium"
+                >
+                  {loading ? 'Güncelleniyor...' : 'Güncelle'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingAnnouncement(null);
+                    setTitle('');
+                    setContent('');
+                    setExpiresAt('');
+                    setError('');
+                  }}
+                  className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                >
+                  İptal
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
