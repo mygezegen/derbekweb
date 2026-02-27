@@ -92,20 +92,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
           return;
         }
 
-        const { data: member, error: memberError } = await supabase
-          .from('members')
-          .select('email, phone')
-          .eq('tc_identity_no', tcNumber)
-          .maybeSingle();
-
-        if (memberError || !member) {
-          setError('Bu TC kimlik numarası ile kayıtlı kullanıcı bulunamadı.');
-          setLoading(false);
-          return;
-        }
-
-        emailToUse = member.email;
+        // Just send TC number to backend, let it handle the logic
         tcNumberToSend = tcNumber;
+        emailToUse = 'temp@placeholder.com'; // Placeholder, backend will use TC to find real email
       }
 
       const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-password-reset`;
