@@ -77,8 +77,40 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // If member exists but has no auth_id, create auth account automatically
     if (!member.auth_id) {
-      throw new Error('Bu kullanıcı henüz sisteme giriş yapmamış. Lütfen önce kayıt olun veya yönetici ile iletişime geçin.');
+      const memberEmail = tcNumber ? member.email : email;
+
+      // Generate a secure temporary password
+      const tempPassword = `Temp${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}!`;
+
+      // Create auth user
+      const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
+        email: memberEmail,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: member.full_name,
+        },
+      });
+
+      if (authError || !authData.user) {
+        console.error('Auth hesabı oluşturma hatası:', authError);
+        throw new Error('Kullanıcı hesabı oluşturulamadı. Lütfen yönetici ile iletişime geçin.');
+      }
+
+      // Update member with auth_id
+      const { error: updateError } = await supabaseClient
+        .from('members')
+        .update({ auth_id: authData.user.id })
+        .eq('id', member.id);
+
+      if (updateError) {
+        console.error('Member auth_id güncelleme hatası:', updateError);
+      }
+
+      // Update member object for the rest of the function
+      member.auth_id = authData.user.id;
     }
 
     // Check if user can request password reset (30 min limit)
