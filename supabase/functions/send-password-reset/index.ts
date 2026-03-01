@@ -54,12 +54,25 @@ Deno.serve(async (req: Request) => {
     // If tcNumber provided, use it to get member info (more reliable)
     let member;
     if (tcNumber) {
-      const { data: memberData } = await supabaseClient
+      // Check if multiple users have the same TC number
+      const { data: membersData, error: membersError } = await supabaseClient
         .from('members')
         .select('id, full_name, phone, auth_id, email')
-        .eq('tc_identity_no', tcNumber)
-        .maybeSingle();
-      member = memberData;
+        .eq('tc_identity_no', tcNumber);
+
+      if (membersError) {
+        console.error('Member sorgu hatası:', membersError);
+        throw new Error('Kullanıcı sorgulanırken bir hata oluştu');
+      }
+
+      if (!membersData || membersData.length === 0) {
+        member = null;
+      } else if (membersData.length > 1) {
+        // Multiple users with same TC number - data integrity issue
+        throw new Error('Bu TC kimlik numarası birden fazla kullanıcıda kayıtlı. Lütfen site yöneticisi ile iletişime geçin.');
+      } else {
+        member = membersData[0];
+      }
     } else {
       const { data: memberData } = await supabaseClient
         .from('members')

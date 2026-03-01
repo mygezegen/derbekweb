@@ -1,102 +1,101 @@
-INSERT INTO members (id, full_name, email, phone, address, is_active, registration_date, registry_number, tc_identity_no, gender, profession, education_level, province, district, father_name, mother_name)
-VALUES
-(gen_random_uuid(), 'HÜSEYİN CAN AVCİ', 'huseyi.n.can.avci..d16@uye.local', '5374480000', NULL, true, '2013-02-15', 'D1-6', '10367115880', 'male', 'ŞOFÖR', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HÜSEYİN ASLAN', 'huseyi.n.aslan.d3622@uye.local', '5384370000', NULL, true, '2024-07-19', 'D3-622', '19936796550', 'male', 'BİLGİSAYAR PROG.', 'Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HÜSEYİN ASLAN', 'huseyi.n.aslan.d1150@uye.local', '5395240000', NULL, true, '2018-12-05', 'D1-150', '11105548106', 'male', 'ÖĞRENCİ', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HÜLYA YILDIZHAN', 'hulya.yildizhan.d3431@uye.local', '5379550000', NULL, true, '2024-04-15', 'D3-431', '19264818986', 'female', 'EV HANIMI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HÜLYA YILDIZ', 'hulya.yildiz.d3539@uye.local', '5384020000', NULL, true, '2024-07-19', 'D3-539', '46303310224', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HİLMİ TUNÇ', 'hi.lmi..tunc.d3419@uye.local', '5365490000', NULL, true, '2024-04-15', 'D3-419', '18862832356', 'male', 'AŞÇI', 'Ön Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HİLMİ GÜNEŞ', 'hi.lmi..gunes.d3464@uye.local', '5379250000', NULL, true, '2024-07-19', 'D3-464', '17716870568', 'male', 'ÖZEL GÜVENLİK PERSONELİ', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HİLMİ GÜNEŞ', 'hi.lmi..gunes.d1168@uye.local', '5357650000', NULL, true, '2018-12-05', 'D1-168', '17392881346', 'male', 'AŞÇI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HİCRAN TORĞUT', 'hi.cran.torgut.d1170@uye.local', '5324210000', NULL, true, '2018-12-05', 'D1-170', '14069384162', 'female', 'EV HANIMI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HIZIR BOSTAN', 'hizir.bostan.d121@uye.local', '5526380000', NULL, true, '2018-12-06', 'D1-21', '15517546958', 'male', 'SERBEST MESLEK ERBABI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HIDIR YOSUNTAŞ', 'hidir.yosuntas.d2271@uye.local', '5386410000', NULL, true, '2018-12-05', 'D2-271', '41365142714', 'male', 'AŞÇI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HEDİYE YILDIZHAN', 'hedi.ye.yildizhan.d3591@uye.local', '5320000000', NULL, true, '2024-07-19', 'D3-591', '19180821718', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYRİYE YILDIZHAN', 'hayri.ye.yildizhan.d3469@uye.local', '5343580000', NULL, true, '2024-07-19', 'D3-469', '19165822228', 'female', 'EV HANIMI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYRİYE YILDIRIM', 'hayri.ye.yildirim.d3537@uye.local', '5363080000', NULL, true, '2024-07-19', 'D3-537', '14086991558', 'female', 'EV HANIMI', 'Ön Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYRİYE KARTAL', 'hayri.ye.kartal.d2214@uye.local', '5326860000', NULL, true, '2018-12-05', 'D2-214', '18103857698', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYRİ YILDIZHAN', 'hayri..yildizhan.d140@uye.local', '5353040000', NULL, true, '2018-12-04', 'D1-40', '19054825958', 'male', 'AŞÇI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYRİ ELMASTAŞ', 'hayri..elmastas.d3495@uye.local', '5359290000', NULL, true, '2024-07-19', 'D3-495', '28309912138', 'male', 'EMEKLİ', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAYDAR DENİZ', 'haydar.deni.z.d194@uye.local', '5322830000', NULL, true, '2018-12-05', 'D1-94', '14174045804', 'male', 'ÖZEL ŞİRKET YÖNETİCİSİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVVA YOSUNTAŞ', 'havva.yosuntas.d124@uye.local', '00000000000', NULL, true, '2018-12-04', 'D1-24', '18655839296', 'female', 'MUHASEBECİ', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVA KURT', 'hava.kurt.d2313@uye.local', '5342300000', NULL, true, '2018-12-05', 'D2-313', '18493844674', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVA KURT', 'hava.kurt.d144@uye.local', '5385650000', NULL, true, '2018-12-05', 'D1-44', '27088950942', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVA KILIÇ', 'hava.kilic.d1140@uye.local', '5313790000', NULL, true, '2018-12-05', 'D1-140', '19654805930', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVA GÜNEŞ', 'hava.gunes.d3499@uye.local', '5374460000', NULL, true, '2024-07-19', 'D3-499', '17254885932', 'female', 'EV HANIMI', 'Okur Yazar Olmayan', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAVA DENİZ', 'hava.deni.z.d2286@uye.local', '5378810000', NULL, true, '2018-12-05', 'D2-286', '15623332308', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATUN YALÇINKAYA', 'hatun.yalcinkaya.d1162@uye.local', '5364800000', NULL, true, '2018-12-05', 'D1-162', '13913389322', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATİCE YOSUNTAŞ', 'hati.ce.yosuntas.d1148@uye.local', '5322600000', NULL, true, '2018-12-05', 'D1-148', '52330109328', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATİCE TORĞUT', 'hati.ce.torgut.d1130@uye.local', '00000000000', NULL, true, '2018-12-05', 'D1-130', '25681997838', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATİCE KURT', 'hati.ce.kurt.d2332@uye.local', '5316630000', NULL, true, '2018-12-09', 'D2-332', '45172347980', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATİCE KARTAL', 'hati.ce.kartal.d2276@uye.local', '5378860000', NULL, true, '2018-12-05', 'D2-276', '18250852720', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HATİCE CEREN DENİZ', 'hati.ce.ceren.deni.z.d1110@uye.local', '5458330000', NULL, true, '2018-12-05', 'D1-110', '41788068530', 'female', 'İNSAN KAYNAKLARI UZMANI', 'Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASİBE DEMİR', 'hasi.be.demi.r.d3430@uye.local', '5365710000', NULL, true, '2024-04-15', 'D3-430', '16027926834', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN YOSUNTAŞ', 'hasan.yosuntas.d3468@uye.local', '5055390000', NULL, true, '2024-07-19', 'D3-468', '52252111942', 'male', 'EMEKLİ', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN YILDIZHAN', 'hasan.yildizhan.d2192@uye.local', '5385920000', NULL, true, '2018-12-05', 'D2-192', '19162822382', 'male', 'AŞÇI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN YILDIZHAN', 'hasan.yildizhan.d3514@uye.local', '5424140000', NULL, true, '2024-07-19', 'D3-514', '19189821436', 'male', 'AŞÇI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN TORĞUT', 'hasan.torgut.d3547@uye.local', '00000000000', NULL, true, '2024-07-19', 'D3-547', '14078383880', 'male', 'MUHASEBECİ', NULL, NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN KURT', 'hasan.kurt.d13@uye.local', '5359650000', NULL, true, '2013-02-15', 'D1-3', '15023352326', 'male', 'AŞÇI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN KILIÇ', 'hasan.kilic.d1138@uye.local', '5325810000', NULL, true, '2018-12-05', 'D1-138', '26611966894', 'male', 'AŞÇI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN KILIÇ', 'hasan.kilic.d1174@uye.local', '5344830000', NULL, true, '2015-01-10', 'D1-174', '19642806376', 'male', 'AŞÇI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN GÜMÜŞ', 'hasan.gumus.d2248@uye.local', '00000000000', NULL, true, '2018-12-05', 'D2-248', '15134348638', 'male', 'AŞÇI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN DEMİRHAN', 'hasan.demi.rhan.d2365@uye.local', '5327860000', NULL, true, '2019-10-08', 'D2-365', '17917863888', 'male', 'AŞÇI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN DEMİR', 'hasan.demi.r.d132@uye.local', '5357350000', NULL, true, '2018-12-04', 'D1-32', '16030926760', 'male', 'ŞOFÖR', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN ÇİÇEK', 'hasan.ci.cek.d3554@uye.local', '5353310000', NULL, true, '2024-07-19', 'D3-554', '15733936670', 'male', 'İŞÇİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN ÇİÇEK', 'hasan.ci.cek.d146@uye.local', '5377760000', NULL, true, '2015-01-09', 'D1-46', '15742936388', 'male', 'SERBEST MESLEK ERBABI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN ASLAN', 'hasan.aslan.d145@uye.local', '5357670000', NULL, true, '2018-12-05', 'D1-45', '19945796268', 'male', 'AŞÇI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HASAN ALTUNDAĞ', 'hasan.altundag.d2259@uye.local', '5336320000', NULL, true, '2016-12-29', 'D2-259', '14083991612', 'male', 'ELEKTRONİK TEKNİSYEN', 'Yüksek Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HANIM TUNÇ', 'hanim.tunc.d131@uye.local', '5301760000', NULL, true, '2018-12-04', 'D1-31', '18865832292', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİSE YILDIZHAN', 'hali.se.yildizhan.d3526@uye.local', '5423630000', NULL, true, '2024-07-19', 'D3-526', '19270818758', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİSE YILDIZHAN', 'hali.se.yildizhan.d3550@uye.local', '5396320000', NULL, true, '2024-07-19', 'D3-550', '19216820548', 'female', 'EV HANIMI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİSE KURT', 'hali.se.kurt.d3556@uye.local', '5309260000', NULL, true, '2024-07-19', 'D3-556', '15020352480', 'female', 'EV HANIMI', 'Okur Yazar Olmayan', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİME KARACA', 'hali.me.karaca.d1139@uye.local', '00000000000', NULL, true, '2018-12-05', 'D1-139', '29014888640', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİME ASLAN', 'hali.me.aslan.d2357@uye.local', '5340650000', NULL, true, '2019-10-08', 'D2-357', '17108282818', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HALİL TAŞTELEN', 'hali.l.tastelen.d2255@uye.local', '5335530000', NULL, true, '2018-12-05', 'D2-255', '13883057184', 'male', 'ŞOFÖR', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HAKAN ASLAN', 'hakan.aslan.d3582@uye.local', '5335010000', NULL, true, '2024-07-19', 'D3-582', '17093283340', 'male', 'SATIŞ ELEMANI', 'Ön Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HADİCE ASLAN', 'hadi.ce.aslan.d3636@uye.local', '5357230000', NULL, true, '2024-07-19', 'D3-636', '19984794966', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HACİ RAMAZAN GÜNEŞ', 'haci..ramazan.gunes.d135@uye.local', '00000000000', NULL, true, '2018-12-04', 'D1-35', '17272885358', 'male', 'AŞÇI', NULL, NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HACİ KAYA YILDIZHAN', 'haci..kaya.yildizhan.d2285@uye.local', '5345100000', NULL, true, '2013-02-17', 'D2-285', '19309817424', 'male', 'EMEKLİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HACER TORĞUT', 'hacer.torgut.d3548@uye.local', '5385900000', NULL, true, '2024-07-19', 'D3-548', '25708996950', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'HACER DENİZ', 'hacer.deni.z.d1118@uye.local', '5336660000', NULL, true, '2018-12-05', 'D1-118', '14126047498', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLTEN KARAKAŞ', 'gulten.karakas.d126@uye.local', '00000000000', NULL, true, '2018-12-04', 'D1-26', '16441913076', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLSER YILDIZHAN', 'gulser.yildizhan.d2315@uye.local', '5325110000', NULL, true, '2018-12-05', 'D2-315', '15883931648', 'female', 'EV HANIMI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLLÜ YILDIZHAN', 'gullu.yildizhan.d3520@uye.local', '5378700000', NULL, true, '2024-07-19', 'D3-520', '19117823822', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLHANIM TUNÇ', 'gulhanim.tunc.d3492@uye.local', '5392560000', NULL, true, '2024-07-19', 'D3-492', '18820833722', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLHAN DENİZ', 'gulhan.deni.z.d3573@uye.local', '5367360000', NULL, true, '2024-07-19', 'D3-573', '14111047908', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLCAN ORHAN', 'gulcan.orhan.d157@uye.local', '5384580000', NULL, true, '2018-12-05', 'D1-57', '20383781686', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLCAN KURT', 'gulcan.kurt.d1184@uye.local', '5384090000', NULL, true, '2018-12-05', 'D1-184', '18082858358', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜLCAN AVCI', 'gulcan.avci.d3477@uye.local', '5374010000', NULL, true, '2024-07-19', 'D3-477', '15575000744', 'female', 'EV HANIMI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÜL GÜNEŞ', 'gul.gunes.d3607@uye.local', '5313630000', NULL, true, '2024-07-19', 'D3-607', '17257885878', 'female', 'EV HANIMI', NULL, NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÖNÜL TUNÇ', 'gonul.tunc.d3448@uye.local', '5340130000', NULL, true, '2024-07-19', 'D3-448', '15838933178', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'GÖNÜL DEMİR', 'gonul.demi.r.d3496@uye.local', '5332110000', NULL, true, '2024-07-19', 'D3-496', '15970928742', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FİLİZ KILINÇ', 'fi.li.z.kilinc.d1103@uye.local', '5383430000', NULL, true, '2018-12-05', 'D1-103', '26437972628', 'female', 'EV HANIMI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FEYZİ YOSUNTAŞ', 'feyzi..yosuntas.d2238@uye.local', '5334460000', NULL, true, '2018-12-05', 'D2-238', '52474104524', 'male', 'EMEKLİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FEYZİ ORHAN', 'feyzi..orhan.d1123@uye.local', '5362930000', NULL, true, '2018-12-05', 'D1-123', '20419780416', 'male', 'AŞÇI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FEYZİ KURT', 'feyzi..kurt.d1183@uye.local', '5325520000', NULL, true, '2018-12-05', 'D1-183', '14975353962', 'male', 'AŞÇI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FEYZİ BALTACI', 'feyzi..baltaci.d3500@uye.local', '5354650000', NULL, true, '2024-07-19', 'D3-500', '46681297698', 'male', 'EMEKLİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FETHİYE GÜNEŞ', 'fethi.ye.gunes.d3504@uye.local', '5358860000', NULL, true, '2024-07-19', 'D3-504', '18821225762', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FETHİ GÜVEN', 'fethi..guven.d2287@uye.local', '5354190000', NULL, true, '2018-12-05', 'D2-287', '26359975264', 'male', 'EMEKLİ', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FERYAL YALÇINKAYA KAÇAR', 'feryal.yalcinkaya.kacar.d192@uye.local', '5378730000', NULL, true, '2018-12-05', 'D1-92', '13910389486', 'female', 'EV HANIMI', 'Ön Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FERDA DENİZ', 'ferda.deni.z.d2295@uye.local', '5352090000', NULL, true, '2018-12-05', 'D2-295', '16180921738', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FEHİME KAÇAR', 'fehi.me.kacar.d1102@uye.local', '00000000000', NULL, true, '2018-12-05', 'D1-102', '16630906742', 'female', 'EV HANIMI', 'Okur Yazar Olmayan', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATOŞ ALTUNDAĞ', 'fatos.altundag.d2316@uye.local', '2163080000', NULL, true, '2018-12-05', 'd2-316', '14092991320', 'female', 'EV HANIMI', 'Okur Yazar', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA YILDIZHAN TUNÇ', 'fatma.yildizhan.tunc.d122@uye.local', '5320000000', NULL, true, '2018-12-04', 'D1-22', '15856932504', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA TORĞUT', 'fatma.torgut.d3580@uye.local', '00000000000', NULL, true, '2024-07-19', 'D3-580', '14072384098', 'female', 'EV HANIMI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA KURT', 'fatma.kurt.d2346@uye.local', '00000000000', NULL, true, '2018-12-09', 'D2-346', '18487844802', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA KURT', 'fatma.kurt.d2225@uye.local', '5347640000', NULL, true, '2018-12-05', 'D2-225', '18391848002', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA KARAKAŞ', 'fatma.karakas.d2306@uye.local', '00000000000', NULL, true, '2016-12-29', 'D2-306', '13814059416', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA KARAKAŞ', 'fatma.karakas.d2210@uye.local', '5379420000', NULL, true, '2018-12-05', 'D2-210', '38938220702', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA GÜNEŞ', 'fatma.gunes.d2268@uye.local', '00000000000', NULL, true, '2018-12-05', 'D2-268', '20315204108', 'female', 'EV HANIMI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA DİLEK DENİZ', 'fatma.di.lek.deni.z.d184@uye.local', '00000000000', NULL, true, '2016-12-29', 'D1-84', '14093383360', 'female', 'ÖĞRENCİ', 'Ön Lisans', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA DENİZ', 'fatma.deni.z.d2373@uye.local', '5333730000', NULL, true, '2019-10-08', 'D2-373', '52714096510', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATMA ASLAN', 'fatma.aslan.d198@uye.local', '00000000000', NULL, true, '2018-12-05', 'D1-98', '17132282006', 'female', 'EV HANIMI', 'Okur Yazar Olmayan', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FATİME DEMİRHAN', 'fati.me.demi.rhan.d2327@uye.local', '5320000000', NULL, true, '2024-07-19', 'D2-327', '17887864830', 'female', 'EV HANIMI', 'İlk Öğretim', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FAHRİ DEMİR', 'fahri..demi.r.d3594@uye.local', '5383800000', NULL, true, '2024-07-19', 'D3-594', '10565109018', 'male', 'KALORİFERCİ', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'FADİLE ASLAN', 'fadi.le.aslan.d2301@uye.local', '5378830000', NULL, true, '2018-12-05', 'D2-301', '23854723420', 'female', 'EV HANIMI', 'Ortaokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESRA DENİZ', 'esra.deni.z.d2331@uye.local', '5316420000', NULL, true, '2018-12-05', 'D2-331', '14051049970', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESMA KILIÇ', 'esma.kilic.d129@uye.local', '2164620000', NULL, true, '2018-12-04', 'D1-29', '19672805356', 'female', 'EV HANIMI', 'Okur Yazar Olmayan', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESMA GÜNEŞ', 'esma.gunes.d171@uye.local', '5549580000', NULL, true, '2018-12-05', 'D1-71', '14117047780', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESMA DENİZ', 'esma.deni.z.d3541@uye.local', '5383630000', NULL, true, '2024-07-19', 'D3-541', '15614332690', 'female', 'EV HANIMI', 'İlkokul', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESİN TAŞTELEN', 'esi.n.tastelen.d3397@uye.local', '5386760000', NULL, true, '2020-01-18', 'D3-397', '15832933396', 'female', 'PAZARLAMACI', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'ESAT KILINÇ', 'esat.kilinc.d3543@uye.local', '5056360000', NULL, true, '2024-07-19', 'D3-543', '18578233850', 'male', 'GÜVENLİK GÖREVLİSİ', 'Lise', NULL, NULL, NULL, NULL),
-(gen_random_uuid(), 'EROL YOSUNTAŞ', 'erol.yosuntas.d1107@uye.local', '5387210000', NULL, true, '2018-12-05', 'D1-107', '52465104816', 'male', 'AŞÇI', 'Ortaokul', NULL, NULL, NULL, NULL);
+==> phone_updates.sql <==
+-- Found 494 valid TC-Phone mappings
+-- Generated SQL to update phone numbers by TC identity number
+
+UPDATE members SET phone = '05327310475' WHERE tc_identity_no = '15383340322';
+UPDATE members SET phone = '05368220000' WHERE tc_identity_no = '14780025658';
+UPDATE members SET phone = '05468570000' WHERE tc_identity_no = '25696997328';
+UPDATE members SET phone = '05353680000' WHERE tc_identity_no = '26425973064';
+UPDATE members SET phone = '05308790000' WHERE tc_identity_no = '26608966968';
+UPDATE members SET phone = '05372400000' WHERE tc_identity_no = '19174821946';
+UPDATE members SET phone = '05352570000' WHERE tc_identity_no = '18445846268';
+UPDATE members SET phone = '05422280000' WHERE tc_identity_no = '23329740976';
+UPDATE members SET phone = '05313140000' WHERE tc_identity_no = '19645806212';
+UPDATE members SET phone = '05352250000' WHERE tc_identity_no = '15958929198';
+UPDATE members SET phone = '05316270000' WHERE tc_identity_no = '14533976626';
+UPDATE members SET phone = '05357830000' WHERE tc_identity_no = '15850932722';
+UPDATE members SET phone = '05337280000' WHERE tc_identity_no = '13877057312';
+UPDATE members SET phone = '05332570000' WHERE tc_identity_no = '13667063080';
+UPDATE members SET phone = '05059950000' WHERE tc_identity_no = '21623243834';
+UPDATE members SET phone = '05325110000' WHERE tc_identity_no = '15880931702';
+UPDATE members SET phone = '05340730000' WHERE tc_identity_no = '18616840576';
+UPDATE members SET phone = '05385050000' WHERE tc_identity_no = '11165146588';
+UPDATE members SET phone = '05423630000' WHERE tc_identity_no = '19285818248';
+UPDATE members SET phone = '05332610000' WHERE tc_identity_no = '15644331670';
+UPDATE members SET phone = '05327070000' WHERE tc_identity_no = '28297912516';
+UPDATE members SET phone = '05315570000' WHERE tc_identity_no = '45889324014';
+UPDATE members SET phone = '05453210000' WHERE tc_identity_no = '14576367290';
+UPDATE members SET phone = '05355930000' WHERE tc_identity_no = '41917063832';
+UPDATE members SET phone = '05079060000' WHERE tc_identity_no = '11819125952';
+UPDATE members SET phone = '05347390000' WHERE tc_identity_no = '17111282744';
+UPDATE members SET phone = '05397460000' WHERE tc_identity_no = '17389881410';
+UPDATE members SET phone = '05524020000' WHERE tc_identity_no = '39256210154';
+UPDATE members SET phone = '05345260000' WHERE tc_identity_no = '26842623856';
+UPDATE members SET phone = '05313440000' WHERE tc_identity_no = '18868832138';
+UPDATE members SET phone = '05365570000' WHERE tc_identity_no = '25651606326';
+UPDATE members SET phone = '05439450000' WHERE tc_identity_no = '34039384138';
+UPDATE members SET phone = '05314670000' WHERE tc_identity_no = '11282142630';
+UPDATE members SET phone = '05394520000' WHERE tc_identity_no = '23620731284';
+UPDATE members SET phone = '05304170000' WHERE tc_identity_no = '16672905376';
+UPDATE members SET phone = '05325600000' WHERE tc_identity_no = '16631301102';
+UPDATE members SET phone = '05366640000' WHERE tc_identity_no = '14530976780';
+UPDATE members SET phone = '05355970000' WHERE tc_identity_no = '15329007388';
+UPDATE members SET phone = '05375960000' WHERE tc_identity_no = '18424846906';
+UPDATE members SET phone = '05382130000' WHERE tc_identity_no = '19243819614';
+UPDATE members SET phone = '02163330000' WHERE tc_identity_no = '18421847050';
+UPDATE members SET phone = '05397300000' WHERE tc_identity_no = '14720027698';
+UPDATE members SET phone = '05383970000' WHERE tc_identity_no = '19114823986';
+UPDATE members SET phone = '05396230000' WHERE tc_identity_no = '15323007506';
+UPDATE members SET phone = '05389150000' WHERE tc_identity_no = '14072049232';
+UPDATE members SET phone = '05373360000' WHERE tc_identity_no = '41656072966';
+UPDATE members SET phone = '05326750000' WHERE tc_identity_no = '15871932084';
+UPDATE members SET phone = '05417640000' WHERE tc_identity_no = '15364949124';
+UPDATE members SET phone = '05323920000' WHERE tc_identity_no = '16075925230';
+UPDATE members SET phone = '05388970000' WHERE tc_identity_no = '23308741604';
+UPDATE members SET phone = '05388910000' WHERE tc_identity_no = '19120823758';
+UPDATE members SET phone = '05327420000' WHERE tc_identity_no = '19138823184';
+UPDATE members SET phone = '05384790000' WHERE tc_identity_no = '40378115548';
+UPDATE members SET phone = '05346620000' WHERE tc_identity_no = '14141046988';
+UPDATE members SET phone = '05377080000' WHERE tc_identity_no = '41383142130';
+UPDATE members SET phone = '05312500000' WHERE tc_identity_no = '15014352618';
+UPDATE members SET phone = '05339640000' WHERE tc_identity_no = '17713870622';
+UPDATE members SET phone = '05517050000' WHERE tc_identity_no = '15973928688';
+UPDATE members SET phone = '05382270000' WHERE tc_identity_no = '17497877886';
+UPDATE members SET phone = '05304490000' WHERE tc_identity_no = '15823933688';
+UPDATE members SET phone = '05313530000' WHERE tc_identity_no = '16112316090';
+UPDATE members SET phone = '05313530000' WHERE tc_identity_no = '15608332828';
+UPDATE members SET phone = '05352130000' WHERE tc_identity_no = '26455972044';
+UPDATE members SET phone = '05301160000' WHERE tc_identity_no = '52129116018';
+UPDATE members SET phone = '05303920000' WHERE tc_identity_no = '46795293814';
+UPDATE members SET phone = '05359230000' WHERE tc_identity_no = '41122147990';
+UPDATE members SET phone = '05382970000' WHERE tc_identity_no = '19168822164';
+UPDATE members SET phone = '05550820000' WHERE tc_identity_no = '15328950340';
+UPDATE members SET phone = '02164600000' WHERE tc_identity_no = '15386340268';
+UPDATE members SET phone = '05352250000' WHERE tc_identity_no = '20318204044';
+UPDATE members SET phone = '05358740000' WHERE tc_identity_no = '18274851938';
+UPDATE members SET phone = '05347740000' WHERE tc_identity_no = '18403847634';
+UPDATE members SET phone = '05394150000' WHERE tc_identity_no = '19957795822';
+UPDATE members SET phone = '05364510000' WHERE tc_identity_no = '26341975838';
+UPDATE members SET phone = '05373760000' WHERE tc_identity_no = '10550109528';
+UPDATE members SET phone = '05397300000' WHERE tc_identity_no = '14617973862';
+UPDATE members SET phone = '05394700000' WHERE tc_identity_no = '16171922010';
+UPDATE members SET phone = '05393730000' WHERE tc_identity_no = '19660805702';
+UPDATE members SET phone = '05393290000' WHERE tc_identity_no = '18448846104';
+UPDATE members SET phone = '05526660000' WHERE tc_identity_no = '19156822510';
+UPDATE members SET phone = '05356010000' WHERE tc_identity_no = '26560968574';
+UPDATE members SET phone = '05386520000' WHERE tc_identity_no = '13808392802';
+UPDATE members SET phone = '05058320000' WHERE tc_identity_no = '16021927042';
+UPDATE members SET phone = '05352090000' WHERE tc_identity_no = '15335007150';
+UPDATE members SET phone = '05385650000' WHERE tc_identity_no = '23509734924';
+UPDATE members SET phone = '05377070000' WHERE tc_identity_no = '14066049460';
+UPDATE members SET phone = '05316630000' WHERE tc_identity_no = '15593333350';
+UPDATE members SET phone = '05363840000' WHERE tc_identity_no = '17830866706';
+UPDATE members SET phone = '05395900000' WHERE tc_identity_no = '18575233914';
+UPDATE members SET phone = '05375430000' WHERE tc_identity_no = '14969354180';
+UPDATE members SET phone = '05353040000' WHERE tc_identity_no = '19051826002';
+UPDATE members SET phone = '05062030000' WHERE tc_identity_no = '52462104970';
+UPDATE members SET phone = '05326430000' WHERE tc_identity_no = '15017352554';
+UPDATE members SET phone = '05309400000' WHERE tc_identity_no = '17359882430';
+UPDATE members SET phone = '05365630000' WHERE tc_identity_no = '18100857752';
+UPDATE members SET phone = '05375140000' WHERE tc_identity_no = '38920221366';
+UPDATE members SET phone = '05357740000' WHERE tc_identity_no = '18088858130';

@@ -85,7 +85,8 @@ export function PaymentCollection() {
   const filteredMembers = members.filter(m =>
     m.full_name.toLowerCase().includes(search.toLowerCase()) ||
     m.email.toLowerCase().includes(search.toLowerCase()) ||
-    (m.phone && m.phone.includes(search))
+    (m.phone && m.phone.includes(search)) ||
+    (m.tc_identity_no && m.tc_identity_no.includes(search))
   );
 
   const sendReceiptEmail = async (
@@ -619,6 +620,7 @@ export function PaymentCollection() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üye</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TC Kimlik No</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aidat</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tutar</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Makbuz No</th>
@@ -633,6 +635,9 @@ export function PaymentCollection() {
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-800">
                     {payment.members?.full_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {payment.members?.tc_identity_no || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {payment.dues?.title}
@@ -682,7 +687,7 @@ export function PaymentCollection() {
               ))}
               {getRecentPayments().length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                     Henüz ödeme kaydı bulunmuyor
                   </td>
                 </tr>

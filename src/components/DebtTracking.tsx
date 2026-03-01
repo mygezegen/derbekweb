@@ -31,11 +31,13 @@ export function DebtTracking() {
     if (!search) return true;
     const memberName = item.members?.full_name?.toLowerCase() || '';
     const memberEmail = item.members?.email?.toLowerCase() || '';
+    const memberTc = item.members?.tc_identity_no?.toString() || '';
     const duesTitle = item.dues?.title?.toLowerCase() || '';
     const searchLower = search.toLowerCase();
 
     return memberName.includes(searchLower) ||
            memberEmail.includes(searchLower) ||
+           memberTc.includes(searchLower) ||
            duesTitle.includes(searchLower);
   });
 
@@ -76,7 +78,7 @@ export function DebtTracking() {
 
   const handleExportToExcel = () => {
     let csvContent = 'Borç Takip Raporu\n\n';
-    csvContent += 'Üye Adı,Email,Telefon,Aidat,Tutar,Ödenen,Kalan,Durum,Son Ödeme Tarihi\n';
+    csvContent += 'Üye Adı,TC Kimlik No,Email,Telefon,Aidat,Tutar,Ödenen,Kalan,Durum,Son Ödeme Tarihi\n';
 
     debtDues.forEach((item) => {
       const dueAmount = item.dues?.amount || 0;
@@ -84,7 +86,7 @@ export function DebtTracking() {
       const remaining = dueAmount - paidAmount;
       const status = getStatusText(item.status);
 
-      csvContent += `${item.members?.full_name || ''},${item.members?.email || ''},${item.members?.phone || ''},${item.dues?.title || ''},${dueAmount},${paidAmount},${remaining},${status},${item.dues?.due_date || ''}\n`;
+      csvContent += `${item.members?.full_name || ''},${item.members?.tc_identity_no || ''},${item.members?.email || ''},${item.members?.phone || ''},${item.dues?.title || ''},${dueAmount},${paidAmount},${remaining},${status},${item.dues?.due_date || ''}\n`;
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -146,7 +148,7 @@ export function DebtTracking() {
           <Search className="absolute left-3 top-3 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder="Üye adı, email veya aidat başlığı ile ara..."
+            placeholder="Üye adı, TC Kimlik No, email veya aidat başlığı ile ara..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -158,6 +160,7 @@ export function DebtTracking() {
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Üye Adı</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">TC Kimlik No</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefon</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aidat</th>
@@ -177,6 +180,9 @@ export function DebtTracking() {
                   <tr key={item.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-800">
                       {item.members?.full_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {item.members?.tc_identity_no || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {item.members?.email}
@@ -206,7 +212,7 @@ export function DebtTracking() {
               })}
               {debtDues.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                     {search ? 'Arama sonucu bulunamadı' : 'Borçlu üye bulunmuyor'}
                   </td>
                 </tr>
