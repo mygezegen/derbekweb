@@ -35,7 +35,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { email, redirectTo, tcNumber }: PasswordResetRequest = await req.json();
+    let { email, redirectTo, tcNumber }: PasswordResetRequest = await req.json();
 
     const origin = req.headers.get('origin') || req.headers.get('referer')?.replace(/\/$/, '') || 'https://caybasi.org';
     const appUrl = redirectTo || `${origin.startsWith('http') ? origin : `https://${origin}`}/reset-password`;
@@ -90,40 +90,67 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // If member exists but has no auth_id, create auth account automatically
+    // If TC was provided, use member's email for the rest of the function
+    if (tcNumber && member.email) {
+      email = member.email;
+    }
+
+    // If member exists but has no auth_id, try to find existing auth account or create new one
     if (!member.auth_id) {
       const memberEmail = tcNumber ? member.email : email;
 
-      // Generate a secure temporary password
-      const tempPassword = `Temp${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}!`;
+      // First, check if auth account already exists with this email
+      const { data: existingAuthUser } = await supabaseClient.auth.admin.listUsers();
+      const foundUser = existingAuthUser?.users?.find(u => u.email === memberEmail);
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
-        email: memberEmail,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: member.full_name,
-        },
-      });
+      if (foundUser) {
+        // Auth account exists, just link it to member
+        const { error: updateError } = await supabaseClient
+          .from('members')
+          .update({ auth_id: foundUser.id })
+          .eq('id', member.id);
 
-      if (authError || !authData.user) {
-        console.error('Auth hesabı oluşturma hatası:', authError);
-        throw new Error('Kullanıcı hesabı oluşturulamadı. Lütfen yönetici ile iletişime geçin.');
+        if (updateError) {
+          console.error('Member auth_id güncelleme hatası:', updateError);
+        }
+
+        member.auth_id = foundUser.id;
+      } else {
+        // Generate a secure temporary password
+        const tempPassword = `Temp${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}!`;
+
+        // Create auth user
+        const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
+          email: memberEmail,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: member.full_name,
+          },
+        });
+
+        if (authError || !authData.user) {
+          console.error('Auth hesabı oluşturma hatası:', authError);
+          throw new Error('Kullanıcı hesabı oluşturulamadı. Lütfen yönetici ile iletişime geçin.');
+        }
+
+        // Update member with auth_id
+        const { error: updateError } = await supabaseClient
+          .from('members')
+          .update({ auth_id: authData.user.id })
+          .eq('id', member.id);
+
+        if (updateError) {
+          console.error('Member auth_id güncelleme hatası:', updateError);
+        }
+
+        member.auth_id = authData.user.id;
       }
 
-      // Update member with auth_id
-      const { error: updateError } = await supabaseClient
-        .from('members')
-        .update({ auth_id: authData.user.id })
-        .eq('id', member.id);
-
-      if (updateError) {
-        console.error('Member auth_id güncelleme hatası:', updateError);
+      // Update email to use the correct one if TC was provided
+      if (tcNumber) {
+        email = memberEmail;
       }
-
-      // Update member object for the rest of the function
-      member.auth_id = authData.user.id;
     }
 
     // Check if user can request password reset (30 min limit)
