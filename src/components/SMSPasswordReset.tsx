@@ -5,10 +5,11 @@ import { Mail, Smartphone, ArrowLeft } from 'lucide-react';
 
 interface SMSPasswordResetProps {
   phoneNumber: string;
+  maskedPhoneNumber?: string;
   onBack: () => void;
 }
 
-export function SMSPasswordReset({ phoneNumber, onBack }: SMSPasswordResetProps) {
+export function SMSPasswordReset({ phoneNumber, maskedPhoneNumber, onBack }: SMSPasswordResetProps) {
   const navigate = useNavigate();
   const [smsCode, setSmsCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -132,7 +133,7 @@ export function SMSPasswordReset({ phoneNumber, onBack }: SMSPasswordResetProps)
           </h2>
           <p className="text-center text-gray-600 text-sm">
             {step === 'code'
-              ? `${phoneNumber} numaralı telefona gönderilen 6 haneli kodu girin`
+              ? `${maskedPhoneNumber || phoneNumber} numaralı telefona gönderilen 6 haneli kodu girin`
               : 'Yeni şifrenizi oluşturun ve e-posta adresinizi güncelleyin'
             }
           </p>

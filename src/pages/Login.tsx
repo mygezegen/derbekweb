@@ -20,6 +20,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   const [resetType, setResetType] = useState<'email' | 'tc'>('email');
   const [showSmsReset, setShowSmsReset] = useState(false);
   const [smsPhone, setSmsPhone] = useState('');
+  const [smsMaskedPhone, setSmsMaskedPhone] = useState('');
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +121,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
       if (result.resetType === 'sms') {
         setSmsPhone(result.phoneNumber);
+        setSmsMaskedPhone(result.maskedPhoneNumber || result.phoneNumber);
         setShowSmsReset(true);
       } else {
         setResetEmailSent(true);
@@ -135,10 +137,12 @@ export function Login({ onLoginSuccess }: LoginProps) {
     return (
       <SMSPasswordReset
         phoneNumber={smsPhone}
+        maskedPhoneNumber={smsMaskedPhone}
         onBack={() => {
           setShowSmsReset(false);
           setShowForgotPassword(false);
           setSmsPhone('');
+          setSmsMaskedPhone('');
           setIdentifier('');
           setError('');
         }}

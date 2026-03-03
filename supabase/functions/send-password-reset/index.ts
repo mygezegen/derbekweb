@@ -168,11 +168,41 @@ Deno.serve(async (req: Request) => {
       email = authUserData.user.email;
     }
 
+    const resetTypeForCheck = isValidExternalEmail(email) ? 'email' : 'sms';
+
+    // For SMS resets: if there is already a valid (non-expired, unused) code, redirect to it directly
+    if (resetTypeForCheck === 'sms') {
+      const { data: existingToken } = await supabaseClient
+        .from('password_reset_tokens')
+        .select('reset_code, phone_number, expires_at')
+        .eq('user_id', member.auth_id)
+        .eq('reset_type', 'sms')
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existingToken) {
+        const phone = existingToken.phone_number || member.phone;
+        return new Response(
+          JSON.stringify({
+            success: true,
+            resetType: 'sms',
+            message: 'Daha önce gönderilmiş geçerli bir kod bulundu',
+            phoneNumber: phone,
+            maskedPhoneNumber: phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'),
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Check if user can request password reset (30 min limit)
     const { data: canRequest } = await supabaseClient
       .rpc('can_request_password_reset', {
         p_user_id: member.auth_id,
-        p_reset_type: isValidExternalEmail(email) ? 'email' : 'sms'
+        p_reset_type: resetTypeForCheck
       });
 
     if (!canRequest) {
@@ -237,7 +267,8 @@ Deno.serve(async (req: Request) => {
           success: true,
           resetType: 'sms',
           message: 'Şifre sıfırlama kodu telefon numaranıza SMS ile gönderildi',
-          phoneNumber: member.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'), // Mask phone
+          phoneNumber: member.phone,
+          maskedPhoneNumber: member.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2'),
         }),
         {
           headers: {
