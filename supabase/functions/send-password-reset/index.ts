@@ -153,6 +153,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Get the actual email from auth.users (may differ from members.email)
+    const { data: authUserData } = await supabaseClient.auth.admin.getUserById(member.auth_id);
+    if (authUserData?.user?.email) {
+      email = authUserData.user.email;
+    }
+
     // Check if user can request password reset (30 min limit)
     const { data: canRequest } = await supabaseClient
       .rpc('can_request_password_reset', {
