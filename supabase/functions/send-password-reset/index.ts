@@ -95,6 +95,15 @@ Deno.serve(async (req: Request) => {
       email = member.email;
     }
 
+    // If member has auth_id, verify it actually exists in auth.users
+    if (member.auth_id) {
+      const { data: existingAuth } = await supabaseClient.auth.admin.getUserById(member.auth_id);
+      if (!existingAuth?.user) {
+        // auth_id is set but user doesn't exist in auth.users — treat as missing
+        member.auth_id = null;
+      }
+    }
+
     // If member exists but has no auth_id, try to find existing auth account or create new one
     if (!member.auth_id) {
       const memberEmail = tcNumber ? member.email : email;
