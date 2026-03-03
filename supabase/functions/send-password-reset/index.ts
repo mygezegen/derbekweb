@@ -177,27 +177,7 @@ Deno.serve(async (req: Request) => {
       const resetCode = generateResetCode();
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
 
-      // Save reset token
-      const { error: tokenError } = await supabaseClient
-        .from('password_reset_tokens')
-        .insert({
-          user_id: member.auth_id,
-          token_hash: createHash('sha256').update(resetCode).digest('hex'),
-          reset_type: 'sms',
-          reset_code: resetCode,
-          phone_number: member.phone,
-          expires_at: expiresAt.toISOString(),
-          send_count: 1,
-          last_sent_at: new Date().toISOString(),
-          ip_address: ipAddress,
-        });
-
-      if (tokenError) {
-        console.error('Token kayıt hatası:', tokenError);
-        throw new Error('Şifre sıfırlama kodu oluşturulamadı');
-      }
-
-      // Send SMS
+      // Send SMS first - only save token if SMS succeeds
       const smsApiUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`;
 
       const smsResponse = await fetch(smsApiUrl, {
@@ -215,6 +195,26 @@ Deno.serve(async (req: Request) => {
       if (!smsResponse.ok) {
         const smsError = await smsResponse.json();
         throw new Error(`SMS gönderilemedi: ${smsError.error || 'Bilinmeyen hata'}`);
+      }
+
+      // SMS sent successfully - now save the token
+      const { error: tokenError } = await supabaseClient
+        .from('password_reset_tokens')
+        .insert({
+          user_id: member.auth_id,
+          token_hash: createHash('sha256').update(resetCode).digest('hex'),
+          reset_type: 'sms',
+          reset_code: resetCode,
+          phone_number: member.phone,
+          expires_at: expiresAt.toISOString(),
+          send_count: 1,
+          last_sent_at: new Date().toISOString(),
+          ip_address: ipAddress,
+        });
+
+      if (tokenError) {
+        console.error('Token kayıt hatası:', tokenError);
+        throw new Error('Şifre sıfırlama kodu kaydedilemedi');
       }
 
       return new Response(
