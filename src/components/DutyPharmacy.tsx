@@ -12,8 +12,8 @@ interface Pharmacy {
   directions: string;
   phone: string;
   phone2: string | null;
-  pharmacyDutyStart: string;
-  pharmacyDutyEnd: string;
+  pharmacyDutyStart: string | null;
+  pharmacyDutyEnd: string | null;
   latitude: number | null;
   longitude: number | null;
 }
@@ -45,21 +45,23 @@ export function DutyPharmacy() {
     setQuotaExceeded(false);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
       const params = new URLSearchParams({ city: 'istanbul' });
       if (district) params.set('district', district.toLowerCase().replace(/\s+/g, '-').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/İ/g, 'i').replace(/Ğ/g, 'g').replace(/Ü/g, 'u').replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c'));
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pharmacy-duty?${params}`;
       const res = await fetch(url, {
         headers: {
-          Authorization: `Bearer ${token || import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
       });
 
-      const result = await res.json();
+      let result: Record<string, unknown>;
+      try {
+        result = await res.json();
+      } catch {
+        throw new Error(`HTTP ${res.status} - JSON parse hatası`);
+      }
 
       if (!res.ok) {
         if (result.code === 'API_KEY_MISSING') {
@@ -70,13 +72,20 @@ export function DutyPharmacy() {
           setQuotaExceeded(true);
           return;
         }
-        throw new Error(result.error || 'Veri alınamadı');
+        throw new Error((result.error as string) || `HTTP ${res.status} hatası`);
       }
 
-      setPharmacies(result.data || []);
-      if (result.lastUpdated) setLastUpdated(result.lastUpdated);
+      const pharmacyData = result.data as Pharmacy[] | undefined;
+      if (!pharmacyData || !Array.isArray(pharmacyData)) {
+        throw new Error('Sunucudan geçersiz yanıt formatı alındı');
+      }
+
+      setPharmacies(pharmacyData);
+      if (result.lastUpdated) setLastUpdated(result.lastUpdated as string);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+      const msg = err instanceof Error ? err.message : 'Bir hata oluştu';
+      console.error('[DutyPharmacy] hata:', msg, err);
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -104,9 +113,12 @@ export function DutyPharmacy() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
     try {
-      return new Date(dateStr).toLocaleString('tr-TR', {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString('tr-TR', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
       });

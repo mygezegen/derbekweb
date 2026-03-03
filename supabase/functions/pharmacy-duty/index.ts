@@ -31,23 +31,36 @@ Deno.serve(async (req: Request) => {
     const apiRes = await fetch(apiUrl);
     const apiData = await apiRes.json();
 
-    if (apiData.status !== "success") {
+    const statusVal = (apiData.status || "").toLowerCase();
+
+    if (statusVal !== "success") {
       const errMsg = apiData.messageTR || apiData.message || "API hatası";
-      const isQuotaError = errMsg.includes("Kayıt Bulunamadı") || errMsg.includes("kredi") || errMsg.includes("Kota") || errMsg.includes("quota");
+      const isQuotaError =
+        errMsg.includes("Kayıt Bulunamadı") ||
+        errMsg.includes("kredi") ||
+        errMsg.includes("Kota") ||
+        errMsg.includes("quota") ||
+        errMsg.includes("Tanımlı");
       return new Response(
         JSON.stringify({
           error: errMsg,
-          code: isQuotaError ? "QUOTA_EXCEEDED" : "API_ERROR"
+          code: isQuotaError ? "QUOTA_EXCEEDED" : "API_ERROR",
+          debug: { status: apiData.status, keys: Object.keys(apiData) },
         }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const statusRes = await fetch(
-      `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty/status?apiKey=${apiKey}`
-    );
-    const statusData = await statusRes.json();
-    const lastUpdated = statusData?.data?.lastupdated ?? null;
+    let lastUpdated: string | null = null;
+    try {
+      const statusRes = await fetch(
+        `https://www.nosyapi.com/apiv2/service/pharmacies-on-duty/status?apiKey=${apiKey}`
+      );
+      const statusData = await statusRes.json();
+      lastUpdated = statusData?.data?.lastupdated ?? null;
+    } catch {
+      // status endpoint optional
+    }
 
     return new Response(
       JSON.stringify({ data: apiData.data, lastUpdated }),
