@@ -53,19 +53,27 @@ Deno.serve(async (req: Request) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (userError || !user) {
-      console.error("Auth error:", userError);
-      return Response.json(
-        { success: false, error: "Yetkisiz erişim" },
-        { headers: corsHeaders, status: 401 }
-      );
+    if (token !== serviceRoleKey) {
+      const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+
+      if (userError || !user) {
+        console.error("Auth error:", userError);
+        return Response.json(
+          { success: false, error: "Yetkisiz erişim" },
+          { headers: corsHeaders, status: 401 }
+        );
+      }
+
+      console.log("User authenticated:", user.id);
+    } else {
+      console.log("Service role key authenticated (internal call)");
     }
 
-    console.log("User authenticated:", user.id);
-
-    const { recipients, message, sendDateTime }: SMSRequest = await req.json();
+    const body = await req.json();
+    const { message, sendDateTime }: Omit<SMSRequest, 'recipients'> & { recipients?: string[]; to?: string } = body;
+    const recipients: string[] = body.recipients ?? (body.to ? [body.to] : []);
     console.log("Request params:", {
       recipientsCount: recipients?.length,
       messageLength: message?.length

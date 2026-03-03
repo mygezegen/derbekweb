@@ -86,17 +86,69 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   const adminCount = members.filter(m => m.is_admin).length;
 
   const handleExportMembers = () => {
-    let csvContent = 'Üye Listesi\n\n';
-    csvContent += 'Ad Soyad,Email,Telefon,Adres,Yönetici,Katılım Tarihi\n';
+    const escapeXml = (val: unknown) => {
+      if (val === null || val === undefined) return '';
+      return String(val)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    };
 
-    members.forEach((member) => {
-      csvContent += `${member.full_name},${member.email},${member.phone || ''},${member.address || ''},${member.is_admin ? 'Evet' : 'Hayır'},${new Date(member.joined_at).toLocaleDateString('tr-TR')}\n`;
-    });
+    const headers = [
+      'Kayıt No', 'Ad Soyad', 'TC Kimlik No', 'Cinsiyet', 'E-Posta',
+      'Telefon', 'Adres', 'İl', 'İlçe', 'Meslek',
+      'Öğrenim Durumu', 'Üye Tipi', 'Durum', 'Yönetici',
+      'Kayıt Tarihi', 'Baba Adı', 'Ana Adı'
+    ];
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const headerRow = headers.map(h => `<Cell ss:StyleID="header"><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`).join('');
+
+    const dataRows = members.map((member) => {
+      const fields = [
+        member.registry_number || '',
+        member.full_name || '',
+        member.tc_identity_no || '',
+        member.gender === 'male' ? 'Erkek' : member.gender === 'female' ? 'Kadın' : '',
+        member.email || '',
+        member.phone || '',
+        (member.address || '').replace(/[\r\n]+/g, ' '),
+        member.province || '',
+        member.district || '',
+        member.profession || '',
+        member.education_level || '',
+        member.member_type || '',
+        member.is_active !== false ? 'Aktif' : 'Pasif',
+        member.is_admin ? 'Evet' : 'Hayır',
+        member.registration_date || new Date(member.joined_at).toLocaleDateString('tr-TR'),
+        member.father_name || '',
+        member.mother_name || ''
+      ];
+      const cells = fields.map(f => `<Cell><Data ss:Type="String">${escapeXml(f)}</Data></Cell>`).join('');
+      return `<Row>${cells}</Row>`;
+    }).join('');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Styles>
+    <Style ss:ID="header">
+      <Font ss:Bold="1"/>
+    </Style>
+  </Styles>
+  <Worksheet ss:Name="Üye Listesi">
+    <Table>
+      <Row>${headerRow}</Row>
+      ${dataRows}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `uyeler_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `uyeler_${new Date().toISOString().split('T')[0]}.xls`;
     link.click();
   };
 
