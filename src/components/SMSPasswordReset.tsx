@@ -97,11 +97,18 @@ export function SMSPasswordReset({ phoneNumber, maskedPhoneNumber, onBack }: SMS
         throw new Error(result.error || 'Şifre değiştirilemedi');
       }
 
-      const message = result.emailUpdated
-        ? 'Şifreniz ve e-posta adresiniz başarıyla güncellendi! Artık yeni e-posta adresinizle giriş yapabilirsiniz.'
-        : 'Şifreniz başarıyla değiştirildi!';
+      if (result.email) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: result.email,
+          password: newPassword,
+        });
 
-      alert(message);
+        if (!signInError) {
+          navigate('/app');
+          return;
+        }
+      }
+
       navigate('/login');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Şifre değiştirilemedi');

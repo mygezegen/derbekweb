@@ -43,6 +43,23 @@ function extractInstagramCode(url: string): string | null {
   return null;
 }
 
+function extractFacebookEmbedSrc(embedCode: string): string | null {
+  if (!embedCode) return null;
+  const srcMatch = embedCode.match(/src="([^"]+)"/);
+  if (srcMatch) return srcMatch[1];
+  if (embedCode.startsWith('http')) return embedCode;
+  return null;
+}
+
+function extractFacebookEmbedDimensions(embedCode: string): { width: number; height: number } {
+  const widthMatch = embedCode.match(/width="(\d+)"/);
+  const heightMatch = embedCode.match(/height="(\d+)"/);
+  return {
+    width: widthMatch ? parseInt(widthMatch[1]) : 500,
+    height: heightMatch ? parseInt(heightMatch[1]) : 500
+  };
+}
+
 function extractFacebookVideoId(url: string): string | null {
   if (!url) return null;
 
@@ -125,6 +142,36 @@ export function MediaRenderer({ item, className = '' }: MediaRendererProps) {
           scrolling="no"
           className="w-full h-full border-0"
           onError={() => setEmbedError(true)}
+        />
+      </div>
+    );
+  }
+
+  if (item.media_type === 'facebook_embed') {
+    const embedCode = item.video_url || '';
+    const src = extractFacebookEmbedSrc(embedCode);
+    const dims = extractFacebookEmbedDimensions(embedCode);
+
+    if (!src) {
+      return (
+        <div className={`bg-gray-200 flex items-center justify-center ${className}`}>
+          <p className="text-red-600 text-sm p-4 text-center">Geçersiz Facebook embed kodu</p>
+        </div>
+      );
+    }
+
+    const aspectRatio = dims.height / dims.width;
+
+    return (
+      <div className={`relative bg-white ${className}`} style={{ paddingBottom: className.includes('h-') ? undefined : `${aspectRatio * 100}%` }}>
+        <iframe
+          src={src}
+          style={{ border: 'none', overflow: 'hidden' }}
+          scrolling="no"
+          allowFullScreen
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          className="w-full h-full absolute inset-0"
+          title={item.caption || 'Facebook içeriği'}
         />
       </div>
     );

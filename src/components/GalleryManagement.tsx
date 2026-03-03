@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Gallery, GalleryImage, Member } from '../types';
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload, Video, Instagram, Facebook, Share2 } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Trash2, Image as ImageIcon, X, Check, Lock, Globe, Upload, Video, Instagram, Facebook, Share2 } from 'lucide-react';
 import { logAction } from '../lib/auditLog';
 import { MediaRenderer } from './MediaRenderer';
 import { GalleryModal } from './GalleryModal';
@@ -32,7 +32,7 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
     cover_image_url: ''
   });
   const [imageFormData, setImageFormData] = useState({
-    media_type: 'image' as 'image' | 'youtube' | 'instagram' | 'facebook',
+    media_type: 'image' as 'image' | 'youtube' | 'instagram' | 'facebook' | 'facebook_embed',
     image_url: '',
     video_url: '',
     caption: '',
@@ -586,11 +586,22 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
                       type="radio"
                       value="facebook"
                       checked={imageFormData.media_type === 'facebook'}
-                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' | 'facebook' })}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' | 'facebook' | 'facebook_embed' })}
                       className="w-4 h-4 text-blue-600"
                     />
                     <Facebook size={18} />
                     <span>Facebook</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      value="facebook_embed"
+                      checked={imageFormData.media_type === 'facebook_embed'}
+                      onChange={(e) => setImageFormData({ ...imageFormData, media_type: e.target.value as 'image' | 'youtube' | 'instagram' | 'facebook' | 'facebook_embed' })}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <Facebook size={18} className="text-blue-500" />
+                    <span>Facebook Embed Kodu</span>
                   </label>
                 </div>
               </div>
@@ -664,6 +675,25 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
                   />
                   <p className="mt-1 text-xs text-gray-600">
                     Facebook video veya post URL'sini girin (örn: https://www.facebook.com/watch?v=...)
+                  </p>
+                </div>
+              )}
+
+              {imageFormData.media_type === 'facebook_embed' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Facebook Embed Kodu
+                  </label>
+                  <textarea
+                    value={imageFormData.video_url}
+                    onChange={(e) => setImageFormData({ ...imageFormData, video_url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
+                    rows={5}
+                    placeholder={`<iframe src="https://www.facebook.com/plugins/post.php?href=..." width="500" height="638" style="border:none;overflow:hidden" ...></iframe>`}
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-600">
+                    Facebook paylasiminizin "Embedi" secenegindan kopyaladiginiz tam iframe kodunu yapistirin. Sadece src URL'sini de girebilirsiniz.
                   </p>
                 </div>
               )}

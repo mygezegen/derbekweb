@@ -31,18 +31,7 @@ Deno.serve(async (req: Request) => {
     const token = authHeader.replace("Bearer ", "");
     console.log("Token alındı, uzunluk:", token.length);
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-        auth: { autoRefreshToken: false, persistSession: false }
-      }
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !user) {
       console.error("Auth hatası:", authError?.message);
@@ -139,10 +128,12 @@ Deno.serve(async (req: Request) => {
     if (website) memberData.website = website;
 
     if (email && password) {
-      const { data: existingUserByEmail } = await supabaseAdmin.auth.admin.listUsers();
-      const existingUser = existingUserByEmail.users.find(u => u.email === email);
+      // Check if auth user already exists with this email
+      const { data: existingAuthByEmail } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      const existingUser = existingAuthByEmail?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
       let authId: string;
+      let isNewAuthUser = false;
 
       if (existingUser) {
         authId = existingUser.id;
@@ -153,6 +144,7 @@ Deno.serve(async (req: Request) => {
           password,
           email_confirm: true,
           user_metadata: { full_name },
+          app_metadata: { admin_created: true },
         });
 
         if (createError) {
@@ -163,23 +155,33 @@ Deno.serve(async (req: Request) => {
         }
 
         authId = newUser.user.id;
+        isNewAuthUser = true;
+        console.log("Yeni auth kullanıcısı oluşturuldu:", authId);
       }
 
       memberData.auth_id = authId;
 
-      const { data: existingMember } = await supabaseAdmin
+      // Small delay to let trigger complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const { data: existingMember, error: memberQueryError } = await supabaseAdmin
         .from("members")
         .select("id")
         .eq("auth_id", authId)
         .maybeSingle();
 
+      console.log("Mevcut üye sorgusu:", { existingMember, memberQueryError });
+
       if (existingMember) {
+        // Trigger already created a record, just update it with full data
+        delete memberData.auth_id; // already set
         const { error: updateError } = await supabaseAdmin
           .from("members")
-          .update(memberData)
+          .update({ ...memberData, auth_id: authId })
           .eq("id", existingMember.id);
 
         if (updateError) {
+          console.error("Update hatası:", updateError);
           return new Response(
             JSON.stringify({ error: `Üye kaydı güncellenemedi: ${updateError.message}` }),
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -187,14 +189,17 @@ Deno.serve(async (req: Request) => {
         }
 
         return new Response(
-          JSON.stringify({ success: true, message: `${full_name} başarıyla güncellendi (sistem erişimi ile)` }),
+          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
+        // No trigger-created record found, insert directly
+        memberData.auth_id = authId;
         const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
 
         if (insertError) {
-          if (!existingUser) {
+          console.error("Insert hatası:", insertError);
+          if (isNewAuthUser) {
             await supabaseAdmin.auth.admin.deleteUser(authId);
           }
           return new Response(

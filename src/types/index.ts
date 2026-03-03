@@ -117,7 +117,7 @@ export interface Gallery {
 export interface GalleryImage {
   id: string;
   gallery_id: string;
-  media_type: 'image' | 'youtube' | 'instagram' | 'facebook';
+  media_type: 'image' | 'youtube' | 'instagram' | 'facebook' | 'facebook_embed';
   image_url: string;
   video_url?: string;
   caption?: string;

@@ -118,11 +118,14 @@ Deno.serve(async (req: Request) => {
       .eq('phone_number', phoneNumber)
       .is('used_at', null);
 
+    const finalEmail = (newEmail && newEmail !== userData.user.email) ? newEmail : userData.user.email;
+
     return new Response(
       JSON.stringify({
         success: true,
         message: newEmail ? 'Şifreniz ve e-posta adresiniz başarıyla güncellendi' : 'Şifreniz başarıyla değiştirildi',
-        emailUpdated: !!newEmail
+        emailUpdated: !!newEmail,
+        email: finalEmail,
       }),
       {
         headers: {

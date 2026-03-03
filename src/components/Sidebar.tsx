@@ -1,4 +1,4 @@
-import { Home, Users, Bell, Calendar, DollarSign, Wallet, ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut } from 'lucide-react';
+import { Home, Users, Bell, Calendar, DollarSign, Wallet, Image as ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut, Pill } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 type MenuItem = {
@@ -15,6 +15,7 @@ const menuItems: MenuItem[] = [
   { icon: DollarSign, label: 'Aidatlar', id: 'dues' },
   { icon: Wallet, label: 'Kasa Yönetimi', id: 'treasury' },
   { icon: ImageIcon, label: 'Galeri', id: 'gallery' },
+  { icon: Pill, label: 'Nöbetçi Eczane', id: 'pharmacy' },
   { icon: Phone, label: 'İletişim', id: 'contact' },
   { icon: FileText, label: 'Bildirimler', id: 'notifications' },
   { icon: Mail, label: 'E-posta Ayarları', id: 'email' },
