@@ -27,19 +27,16 @@ export function LoginForm() {
           return;
         }
 
-        const { data: member, error: memberError } = await supabase
-          .from('members')
-          .select('email')
-          .eq('tc_identity_no', tcNumber)
-          .maybeSingle();
+        const { data: emailResult, error: memberError } = await supabase
+          .rpc('get_email_by_tc', { p_tc_identity_no: tcNumber });
 
-        if (memberError || !member) {
+        if (memberError || !emailResult) {
           setError('Bu TC kimlik numarası ile kayıtlı kullanıcı bulunamadı.');
           setLoading(false);
           return;
         }
 
-        emailToUse = member.email;
+        emailToUse = emailResult;
       }
 
       const { error } = await signIn(emailToUse, password);
