@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -21,6 +21,7 @@ import { NotificationsPanel } from '../components/NotificationsPanel';
 import { SMSConfiguration } from '../components/SMSConfiguration';
 import { DutyPharmacy } from '../components/DutyPharmacy';
 import EmailVerificationCheck from '../components/EmailVerificationCheck';
+import { QRScannerPage } from '../components/QRScannerPage';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -29,7 +30,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -184,6 +185,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
       { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
+      { id: 'qr-scanner', label: 'QR Tarama', icon: QrCode, pageKey: 'qr-scanner' },
       { id: 'smtp', label: 'E-posta Ayarları', icon: Mail, pageKey: 'smtp' },
       { id: 'sms', label: 'SMS Ayarları', icon: MessageSquare, pageKey: 'sms' },
       { id: 'email-templates', label: 'E-posta Şablonları', icon: FileText, pageKey: 'email-templates' },
@@ -192,7 +194,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -507,6 +509,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'notifications' && currentMember?.is_admin && (
           <NotificationsPanel />
+        )}
+
+        {activeTab === 'qr-scanner' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
+          <QRScannerPage currentMember={currentMember} />
         )}
           </div>
         </main>

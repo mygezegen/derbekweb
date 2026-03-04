@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Event, EventParticipant } from '../types';
-import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays, Image as ImageIcon, FileText, Edit } from 'lucide-react';
+import { Trash2, Plus, Calendar, MapPin, Check, X, Users, List, CalendarDays, FileText, CreditCard as Edit, QrCode, ScanLine } from 'lucide-react';
 import { CalendarView } from './CalendarView';
 import { logAction, getCurrentMemberId } from '../lib/auditLog';
 import { HTMLEditor } from './HTMLEditor';
 import { MemberSelectionModal } from './MemberSelectionModal';
+import { QRCodeDisplay } from './QRCodeDisplay';
+import { EventQRManagement } from './EventQRManagement';
 
 interface EventsListProps {
   events: Event[];
@@ -35,6 +37,11 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
   const [eventParticipants, setEventParticipants] = useState<any[]>([]);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [qrCheckinEnabled, setQrCheckinEnabled] = useState(false);
+  const [showQRCode, setShowQRCode] = useState<{ eventId: string; eventTitle: string } | null>(null);
+  const [showQRManagement, setShowQRManagement] = useState<{ eventId: string; eventTitle: string } | null>(null);
+  const [allMembers, setAllMembers] = useState<any[]>([]);
+  const [existingParticipantIds, setExistingParticipantIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadCurrentMember();
@@ -161,6 +168,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
           created_by: memberData.id,
           image_url: imageUrl || undefined,
           image_public_id: imagePublicId || undefined,
+          qr_checkin_enabled: qrCheckinEnabled,
         });
 
       if (insertError) throw insertError;
@@ -182,6 +190,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
       setLocation('');
       setImageFile(null);
       setImagePreview('');
+      setQrCheckinEnabled(false);
       setShowForm(false);
       onRefresh();
     } catch (err) {
@@ -269,7 +278,13 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
     if (!selectedEventId) return;
 
     try {
-      const participants = memberIds.map(memberId => ({
+      const newIds = memberIds.filter(id => !existingParticipantIds.includes(id));
+      if (newIds.length === 0) {
+        setShowParticipantModal(false);
+        setSelectedEventId(null);
+        return;
+      }
+      const participants = newIds.map(memberId => ({
         event_id: selectedEventId,
         member_id: memberId,
         status: 'confirmed'
@@ -324,6 +339,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
     setEventDate(eventDateTime.toISOString().split('T')[0]);
     setEventTime(eventDateTime.toTimeString().slice(0, 5));
     setImagePreview((event as any).image_url || '');
+    setQrCheckinEnabled(event.qr_checkin_enabled || false);
     setShowEditModal(true);
   };
 
@@ -375,6 +391,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
           location,
           image_url: imageUrl || undefined,
           image_public_id: imagePublicId || undefined,
+          qr_checkin_enabled: qrCheckinEnabled,
         })
         .eq('id', editingEvent.id);
 
@@ -542,6 +559,23 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
               </div>
             )}
           </div>
+          <div className="mb-4">
+            <label className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${qrCheckinEnabled ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+              <input
+                type="checkbox"
+                checked={qrCheckinEnabled}
+                onChange={(e) => setQrCheckinEnabled(e.target.checked)}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <div className="flex items-center gap-2">
+                <QrCode size={16} className={qrCheckinEnabled ? 'text-blue-600' : 'text-gray-400'} />
+                <div>
+                  <span className={`text-sm font-medium ${qrCheckinEnabled ? 'text-blue-800' : 'text-gray-700'}`}>QR Kod Girişi</span>
+                  <p className="text-xs text-gray-500">Etkinlik girişlerini QR kod ile takip edin</p>
+                </div>
+              </div>
+            </label>
+          </div>
           <div className="flex gap-2">
             <button
               type="submit"
@@ -561,6 +595,7 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                 setLocation('');
                 setImageFile(null);
                 setImagePreview('');
+                setQrCheckinEnabled(false);
                 setError('');
               }}
               className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
@@ -571,14 +606,33 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
         </form>
       )}
 
+      {showQRCode && currentMemberId && (
+        <QRCodeDisplay
+          eventId={showQRCode.eventId}
+          memberId={currentMemberId}
+          memberName=""
+          eventTitle={showQRCode.eventTitle}
+          onClose={() => setShowQRCode(null)}
+        />
+      )}
+
+      {showQRManagement && (
+        <EventQRManagement
+          eventId={showQRManagement.eventId}
+          eventTitle={showQRManagement.eventTitle}
+          onClose={() => setShowQRManagement(null)}
+        />
+      )}
+
       {showParticipantModal && (
         <MemberSelectionModal
+          members={allMembers}
+          selectedMemberIds={existingParticipantIds}
           onClose={() => {
             setShowParticipantModal(false);
             setSelectedEventId(null);
           }}
-          onSelect={handleAddParticipants}
-          title="Katılımcı Ekle"
+          onConfirm={handleAddParticipants}
         />
       )}
 
@@ -735,9 +789,15 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                   )}
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="text-lg font-semibold text-gray-800 mb-2">
-                        {event.title}
-                      </h4>
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h4 className="text-lg font-semibold text-gray-800">{event.title}</h4>
+                        {event.qr_checkin_enabled && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                            <QrCode size={10} />
+                            QR Giriş
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-1 text-sm text-gray-600 mb-3">
                         <div className="flex items-center gap-2">
                           <Calendar size={16} />
@@ -783,11 +843,30 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                           <X size={16} />
                           Katılamayacağım
                         </button>
+                        {event.qr_checkin_enabled && myParticipation[event.id] && !isAdmin && (
+                          <button
+                            onClick={() => setShowQRCode({ eventId: event.id, eventTitle: event.title })}
+                            className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          >
+                            <QrCode size={16} />
+                            QR Kodum
+                          </button>
+                        )}
                         {isAdmin && (
                           <>
                             <button
-                              onClick={() => {
+                              onClick={async () => {
                                 setSelectedEventId(event.id);
+                                const { data: membersData } = await supabase
+                                  .from('members')
+                                  .select('id, full_name, email, phone')
+                                  .order('full_name');
+                                setAllMembers(membersData || []);
+                                const { data: existingData } = await supabase
+                                  .from('event_participants')
+                                  .select('member_id')
+                                  .eq('event_id', event.id);
+                                setExistingParticipantIds((existingData || []).map((p: any) => p.member_id));
                                 setShowParticipantModal(true);
                               }}
                               className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
@@ -802,6 +881,15 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                               <FileText size={16} />
                               Katılımcı Raporu
                             </button>
+                            {event.qr_checkin_enabled && (
+                              <button
+                                onClick={() => setShowQRManagement({ eventId: event.id, eventTitle: event.title })}
+                                className="flex items-center gap-1 px-3 py-1 rounded-lg text-sm font-medium bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                              >
+                                <ScanLine size={16} />
+                                QR Giriş
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -1018,6 +1106,23 @@ export function EventsList({ events, isAdmin, onRefresh }: EventsListProps) {
                     />
                   </div>
                 )}
+              </div>
+              <div className="mb-4">
+                <label className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors ${qrCheckinEnabled ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                  <input
+                    type="checkbox"
+                    checked={qrCheckinEnabled}
+                    onChange={(e) => setQrCheckinEnabled(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <div className="flex items-center gap-2">
+                    <QrCode size={16} className={qrCheckinEnabled ? 'text-blue-600' : 'text-gray-400'} />
+                    <div>
+                      <span className={`text-sm font-medium ${qrCheckinEnabled ? 'text-blue-800' : 'text-gray-700'}`}>QR Kod Girişi</span>
+                      <p className="text-xs text-gray-500">Etkinlik girişlerini QR kod ile takip edin</p>
+                    </div>
+                  </div>
+                </label>
               </div>
               <div className="flex gap-2">
                 <button

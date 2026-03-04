@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { X, Save, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, Calendar, IdCard, Users } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { X, Save, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, Calendar, Car as IdCard, Users } from 'lucide-react';
 
 interface MemberEditModalProps {
   member: Member;
@@ -40,6 +41,7 @@ type FormData = {
 };
 
 export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalProps) {
+  const { session } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormData>({
@@ -111,6 +113,25 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
         website: form.website.trim() || null,
         updated_at: new Date().toISOString(),
       };
+
+      const newEmail = form.email.trim() || null;
+      const emailChanged = newEmail && newEmail !== member.email && member.auth_id;
+
+      if (emailChanged && session?.access_token) {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-member-email`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ member_id: member.id, new_email: newEmail }),
+          }
+        );
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Email güncellenemedi');
+      }
 
       const { error: updateError } = await supabase
         .from('members')

@@ -62,6 +62,7 @@ export interface Event {
   created_by: string;
   created_at: string;
   updated_at: string;
+  qr_checkin_enabled?: boolean;
 }
 
 export interface AnnouncementWithCreator extends Announcement {
@@ -137,6 +138,15 @@ export interface EventParticipant {
   status: 'attending' | 'not_attending' | 'maybe';
   registered_at: string;
   updated_at: string;
+  checked_in?: boolean;
+  checked_in_at?: string;
+  checked_in_by?: string;
+}
+
+export interface QRTokenPayload {
+  event_id: string;
+  member_id: string;
+  issued_at: number;
 }
 
 export interface EventWithParticipants extends Event {
