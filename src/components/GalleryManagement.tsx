@@ -120,30 +120,13 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
     if (!selectedGallery) return;
 
     try {
-      const insertData: Record<string, unknown> = {
+      await supabase.from('gallery_images').insert({
+        ...imageFormData,
         gallery_id: selectedGallery.id,
-        created_by: currentMember.id,
-        media_type: imageFormData.media_type,
-        caption: imageFormData.caption || null,
-        display_order: imageFormData.display_order,
-      };
+        created_by: currentMember.id
+      });
 
-      if (imageFormData.media_type === 'image') {
-        insertData.image_url = imageFormData.image_url;
-        insertData.video_url = null;
-      } else {
-        insertData.video_url = imageFormData.video_url || null;
-        insertData.image_url = imageFormData.image_url || imageFormData.video_url;
-      }
-
-      const { error: insertError } = await supabase.from('gallery_images').insert(insertData);
-      if (insertError) {
-        console.error('gallery_images insert error:', insertError);
-        alert(`Hata: ${insertError.message}`);
-        return;
-      }
-
-      await logAction(currentMember.id, 'create', 'gallery_images', undefined, undefined, insertData as Record<string, unknown>);
+      await logAction(currentMember.id, 'create', 'gallery_images', undefined, undefined, imageFormData);
 
       setShowImageForm(false);
       setImageFormData({
@@ -184,9 +167,7 @@ export function GalleryManagement({ currentMember, isAdmin }: GalleryManagementP
       const imagesToInsert = urls.map((url, index) => ({
         gallery_id: selectedGallery.id,
         image_url: url,
-        caption: null,
-        video_url: null,
-        media_type: 'image',
+        caption: '',
         display_order: maxOrder + index + 1,
         created_by: currentMember.id
       }));

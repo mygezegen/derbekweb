@@ -62,7 +62,6 @@ export interface Event {
   created_by: string;
   created_at: string;
   updated_at: string;
-  qr_checkin_enabled?: boolean;
 }
 
 export interface AnnouncementWithCreator extends Announcement {
@@ -138,15 +137,6 @@ export interface EventParticipant {
   status: 'attending' | 'not_attending' | 'maybe';
   registered_at: string;
   updated_at: string;
-  checked_in?: boolean;
-  checked_in_at?: string;
-  checked_in_by?: string;
-}
-
-export interface QRTokenPayload {
-  event_id: string;
-  member_id: string;
-  issued_at: number;
 }
 
 export interface EventWithParticipants extends Event {
@@ -244,55 +234,4 @@ export interface RolePermission {
 
 export interface PermissionWithDetails extends RolePermission {
   permissions?: Permission;
-}
-
-export type SurveyQuestionType = 'single_choice' | 'multiple_choice' | 'text' | 'rating';
-
-export interface Survey {
-  id: string;
-  title: string;
-  description?: string;
-  created_by?: string;
-  is_active: boolean;
-  is_anonymous: boolean;
-  qr_enabled: boolean;
-  show_results_to_members: boolean;
-  starts_at?: string;
-  ends_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SurveyQuestion {
-  id: string;
-  survey_id: string;
-  question_text: string;
-  question_type: SurveyQuestionType;
-  options?: string[];
-  is_required: boolean;
-  display_order: number;
-  created_at: string;
-}
-
-export interface SurveyResponse {
-  id: string;
-  survey_id: string;
-  member_id?: string;
-  submitted_at: string;
-}
-
-export interface SurveyAnswer {
-  id: string;
-  response_id: string;
-  question_id: string;
-  answer_text?: string;
-  answer_options?: number[];
-  answer_rating?: number;
-  created_at: string;
-}
-
-export interface SurveyWithStats extends Survey {
-  response_count?: number;
-  questions?: SurveyQuestion[];
-  user_responded?: boolean;
 }
