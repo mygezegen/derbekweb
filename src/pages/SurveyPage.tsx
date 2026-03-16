@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Send, User, Phone, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Survey, SurveyQuestion } from '../types';
@@ -8,6 +8,9 @@ type AnswerValue = string | string[] | number;
 
 export function SurveyPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [countdown, setCountdown] = useState(5);
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
@@ -24,6 +27,22 @@ export function SurveyPage() {
     if (!id) { setStep('not-found'); return; }
     checkAuthAndLoad();
   }, [id]);
+
+  useEffect(() => {
+    if (step !== 'success') return;
+    setCountdown(5);
+    let count = 5;
+    const interval = setInterval(() => {
+      count -= 1;
+      setCountdown(count);
+      if (count <= 0) {
+        clearInterval(interval);
+        navigate('/');
+      }
+    }, 1000);
+    redirectTimerRef.current = interval as unknown as ReturnType<typeof setTimeout>;
+    return () => clearInterval(interval);
+  }, [step, navigate]);
 
   const checkAuthAndLoad = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -160,8 +179,13 @@ export function SurveyPage() {
     }
   };
 
-  const totalPages = Math.ceil(questions.length / questionsPerPage);
-  const pageQuestions = questions.slice(currentPage * questionsPerPage, (currentPage + 1) * questionsPerPage);
+  const needsGuestContactPage = !isLoggedIn && survey !== null && !survey.is_anonymous;
+  const questionPageCount = Math.ceil(questions.length / questionsPerPage);
+  const totalPages = needsGuestContactPage ? questionPageCount + 1 : questionPageCount;
+  const isContactPage = needsGuestContactPage && currentPage === totalPages - 1;
+  const pageQuestions = isContactPage
+    ? []
+    : questions.slice(currentPage * questionsPerPage, (currentPage + 1) * questionsPerPage);
 
   if (step === 'loading') {
     return (
@@ -207,18 +231,25 @@ export function SurveyPage() {
             <CheckCircle size={40} className="text-green-600" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Teşekkürler!</h2>
-          <p className="text-gray-500 mb-2">Yanıtınız başarıyla kaydedildi.</p>
+          <p className="text-gray-500 mb-1">Yanıtınız başarıyla kaydedildi.</p>
           {survey && (
-            <p className="text-sm text-gray-400">{survey.title}</p>
+            <p className="text-sm text-gray-400 mb-5">{survey.title}</p>
           )}
+          <p className="text-xs text-gray-400 mb-3">
+            {countdown} saniye içinde ana sayfaya yönlendirileceksiniz...
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="text-sm font-medium text-red-600 hover:text-red-700 underline transition-colors"
+          >
+            Hemen git
+          </button>
         </div>
       </div>
     );
   }
 
   if (!survey) return null;
-
-  const showGuestContactForm = !isLoggedIn && !survey.is_anonymous && currentPage === 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -246,7 +277,7 @@ export function SurveyPage() {
           {totalPages > 1 && (
             <div className="px-6 pt-4">
               <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>Bölüm {currentPage + 1} / {totalPages}</span>
+                <span>{isContactPage ? 'Katılımcı Bilgileri' : `Bölüm ${currentPage + 1} / ${questionPageCount}`}</span>
                 <span>{questions.length} soru</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -259,7 +290,7 @@ export function SurveyPage() {
           )}
 
           <div className="p-6 space-y-6">
-            {showGuestContactForm && (
+            {isContactPage && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
                 <div className="flex items-center gap-2 text-blue-700">
                   <User size={16} />
@@ -310,7 +341,7 @@ export function SurveyPage() {
               </div>
             )}
 
-            {!showGuestContactForm && !survey.is_anonymous && currentPage === 0 && isLoggedIn && (
+            {!isContactPage && !survey.is_anonymous && currentPage === 0 && isLoggedIn && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Adınız Soyadınız <span className="text-gray-400 text-xs">(opsiyonel)</span>

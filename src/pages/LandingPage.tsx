@@ -4,7 +4,8 @@ import { supabase } from '../lib/supabase';
 import {
   Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users,
   MessageCircle, Youtube, Instagram, Facebook, LogIn, Landmark, CreditCard,
-  Copy, Check, ChevronDown, Menu, X, Star, Heart, Globe
+  Copy, Check, ChevronDown, Menu, X, Star, Heart, Globe, ClipboardList,
+  ChevronRight, Timer
 } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
 import { GalleryModal } from '../components/GalleryModal';
@@ -44,6 +45,17 @@ interface BoardMember {
   phone: string;
   photo_url: string;
   display_order: number;
+}
+
+interface Survey {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  ends_at: string | null;
+  created_at: string;
+  is_anonymous: boolean;
+  question_count?: number;
 }
 
 interface ContactInfo {
@@ -100,6 +112,7 @@ export default function LandingPage() {
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<GalleryImage | null>(null);
   const [selectedGalleryImages, setSelectedGalleryImages] = useState<GalleryImage[]>([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
   const [copiedIban, setCopiedIban] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -113,12 +126,13 @@ export default function LandingPage() {
   }, []);
 
   const loadData = async () => {
-    const [announcementsRes, eventsRes, galleryRes, boardRes, contactRes] = await Promise.all([
+    const [announcementsRes, eventsRes, galleryRes, boardRes, contactRes, surveysRes] = await Promise.all([
       supabase.from('announcements').select('*').order('created_at', { ascending: false }).limit(3),
       supabase.from('events').select('*').order('event_date', { ascending: true }),
       supabase.from('galleries').select('id, title, cover_image_url, created_at').eq('is_public', true).order('created_at', { ascending: false }).limit(6),
       supabase.from('board_members').select('*').eq('is_active', true).order('display_order', { ascending: true }),
       supabase.from('contact_info').select('*').limit(1).maybeSingle(),
+      supabase.from('surveys').select('id, title, description, status, ends_at, created_at, is_anonymous, survey_questions(count)').eq('status', 'published').order('created_at', { ascending: false }),
     ]);
 
     if (announcementsRes.data) setAnnouncements(announcementsRes.data);
@@ -132,6 +146,12 @@ export default function LandingPage() {
     }
     if (boardRes.data) setBoardMembers(boardRes.data);
     if (contactRes.data) setContactInfo(contactRes.data);
+    if (surveysRes.data) {
+      setSurveys(surveysRes.data.map((s: Record<string, unknown>) => ({
+        ...s,
+        question_count: Array.isArray(s.survey_questions) ? (s.survey_questions as {count: number}[])[0]?.count ?? 0 : 0,
+      })) as Survey[]);
+    }
   };
 
   const handleCopyIban = (iban: string) => {
@@ -192,10 +212,16 @@ export default function LandingPage() {
   const navLinks = [
     { id: 'duyurular', label: 'Duyurular' },
     { id: 'etkinlikler', label: 'Etkinlikler' },
+    { id: 'anketler', label: 'Anketler' },
     { id: 'yonetim', label: 'Yönetim' },
     { id: 'galeri', label: 'Galeri' },
     { id: 'iletisim', label: 'İletişim' },
   ];
+
+  const isSurveyExpired = (ends_at: string | null) => {
+    if (!ends_at) return false;
+    return new Date(ends_at) < new Date();
+  };
 
   return (
     <div className="min-h-screen bg-white text-gray-900">
@@ -448,6 +474,90 @@ export default function LandingPage() {
               </div>
             )}
           </AnimatedSection>
+        </section>
+
+        {/* Surveys */}
+        <section id="anketler" className="py-20 border-t border-gray-100">
+          <AnimatedSection>
+            <div className="flex flex-col items-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-sky-50 text-sky-600 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+                <ClipboardList size={15} />
+                Katılın
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">Anketler</h2>
+              <div className="w-16 h-1 bg-gradient-to-r from-sky-400 to-sky-600 rounded-full" />
+              <p className="text-gray-500 text-sm mt-4 text-center max-w-xl">
+                Görüşleriniz bizim için değerli. Aşağıdaki anketlere katılarak derneğimize katkıda bulunabilirsiniz.
+              </p>
+            </div>
+          </AnimatedSection>
+
+          {surveys.filter(s => !isSurveyExpired(s.ends_at)).length > 0 ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {surveys.map((survey, i) => {
+                const expired = isSurveyExpired(survey.ends_at);
+                if (expired) return null;
+                return (
+                  <AnimatedSection key={survey.id} delay={i * 100}>
+                    <div className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col hover:-translate-y-0.5">
+                      <div className="h-1.5 bg-gradient-to-r from-sky-400 to-sky-600" />
+                      <div className="p-6 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="bg-sky-50 p-2.5 rounded-xl flex-shrink-0">
+                            <ClipboardList size={20} className="text-sky-600" />
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 justify-end">
+                            {survey.is_anonymous && (
+                              <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full font-medium">
+                                Anonim
+                              </span>
+                            )}
+                            {survey.ends_at && (
+                              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                                <Timer size={11} />
+                                {new Date(survey.ends_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <h3 className="text-base font-bold text-gray-800 mb-2 group-hover:text-sky-600 transition-colors leading-snug">
+                          {survey.title}
+                        </h3>
+
+                        {survey.description && (
+                          <p className="text-gray-500 text-sm leading-relaxed line-clamp-2 mb-4 flex-1">
+                            {survey.description}
+                          </p>
+                        )}
+
+                        <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+                          <span className="text-xs text-gray-400 flex items-center gap-1">
+                            <Clock size={11} />
+                            {formatDate(survey.created_at)}
+                          </span>
+                          <button
+                            onClick={() => navigate(`/survey/${survey.id}`)}
+                            className="inline-flex items-center gap-1.5 bg-sky-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-sky-700 transition-colors group-hover:shadow-md"
+                          >
+                            Katıl
+                            <ChevronRight size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </AnimatedSection>
+                );
+              })}
+            </div>
+          ) : (
+            <AnimatedSection>
+              <div className="text-center text-gray-400 py-16 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <ClipboardList size={40} className="mx-auto mb-3 opacity-30" />
+                <p>Şu anda aktif anket bulunmamaktadır.</p>
+              </div>
+            </AnimatedSection>
+          )}
         </section>
 
         {/* Board Members */}
