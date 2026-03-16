@@ -106,8 +106,10 @@ export function SurveyManagement({ currentMember, isAdmin }: SurveyManagementPro
 
       await loadSurveys();
       setView('list');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Hata oluştu');
+    } catch (err: unknown) {
+      const errObj = err as { message?: string; code?: string; details?: string; hint?: string };
+      const detail = [errObj.message, errObj.details, errObj.hint].filter(Boolean).join(' | ');
+      setError(detail || 'Anket kaydedilirken hata oluştu');
     } finally {
       setFormLoading(false);
     }
