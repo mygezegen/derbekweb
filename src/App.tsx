@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import LandingPage from './pages/LandingPage';
 import { ResetPassword } from './pages/ResetPassword';
 import { Signup } from './pages/Signup';
+import { SurveyPage } from './pages/SurveyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Debug: Environment variables
@@ -92,6 +93,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/app" element={<MemberPortal />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/survey/:id" element={<SurveyPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

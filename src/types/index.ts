@@ -245,3 +245,57 @@ export interface RolePermission {
 export interface PermissionWithDetails extends RolePermission {
   permissions?: Permission;
 }
+
+export type SurveyQuestionType = 'text' | 'textarea' | 'radio' | 'checkbox' | 'select' | 'rating' | 'date';
+
+export interface SurveyQuestion {
+  id: string;
+  survey_id: string;
+  question_text: string;
+  question_type: SurveyQuestionType;
+  options: string[] | null;
+  is_required: boolean;
+  display_order: number;
+  created_at: string;
+}
+
+export interface Survey {
+  id: string;
+  title: string;
+  description?: string;
+  created_by?: string;
+  is_active: boolean;
+  is_anonymous: boolean;
+  qr_enabled: boolean;
+  show_results_to_members: boolean;
+  allow_multiple_responses: boolean;
+  status: 'draft' | 'published' | 'closed';
+  starts_at?: string;
+  ends_at?: string;
+  created_at: string;
+  updated_at: string;
+  survey_questions?: SurveyQuestion[];
+  members?: Member;
+}
+
+export interface SurveyResponse {
+  id: string;
+  survey_id: string;
+  member_id?: string;
+  respondent_name?: string;
+  submitted_at: string;
+  ip_hash?: string;
+  members?: Member;
+  survey_answers?: SurveyAnswer[];
+}
+
+export interface SurveyAnswer {
+  id: string;
+  response_id: string;
+  question_id: string;
+  answer_text?: string;
+  answer_options?: string[];
+  answer_rating?: number;
+  created_at: string;
+  survey_questions?: SurveyQuestion;
+}

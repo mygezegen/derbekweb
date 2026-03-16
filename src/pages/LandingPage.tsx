@@ -121,6 +121,13 @@ export default function LandingPage() {
     if (contactData) setContactInfo(contactData);
   };
 
+  const normalizeGalleryImage = (img: GalleryImage): GalleryImage => {
+    if (img.media_type === 'image' && img.image_url && img.image_url.includes('facebook.com')) {
+      return { ...img, media_type: 'facebook', video_url: img.image_url };
+    }
+    return img;
+  };
+
   const handleGalleryClick = async (item: GalleryItem) => {
     const { data: galleryImages } = await supabase
       .from('gallery_images')
@@ -129,13 +136,29 @@ export default function LandingPage() {
       .order('display_order', { ascending: true });
 
     if (galleryImages && galleryImages.length > 0) {
-      const images = galleryImages.map(img => ({
+      const images = galleryImages.map(img => normalizeGalleryImage({
         ...img,
         media_type: img.media_type || 'image'
       }));
       setSelectedGalleryImages(images);
       setCurrentImageIndex(0);
       setSelectedGalleryImage(images[0]);
+    } else {
+      const isFacebook = item.image_url?.includes('facebook.com');
+      const placeholder: GalleryImage = {
+        id: item.id,
+        gallery_id: item.id,
+        media_type: isFacebook ? 'facebook' : 'image',
+        image_url: isFacebook ? '' : (item.image_url || ''),
+        video_url: isFacebook ? item.image_url : undefined,
+        caption: item.title,
+        display_order: 0,
+        created_by: '',
+        created_at: item.created_at,
+      };
+      setSelectedGalleryImages([placeholder]);
+      setCurrentImageIndex(0);
+      setSelectedGalleryImage(placeholder);
     }
   };
 
@@ -454,7 +477,7 @@ export default function LandingPage() {
                   onClick={() => handleGalleryClick(item)}
                 >
                   <div className="relative h-64 overflow-hidden">
-                    {item.cover_image_url ? (
+                    {item.cover_image_url && !item.cover_image_url.includes('facebook.com') && !item.cover_image_url.includes('instagram.com') ? (
                       <>
                         <img
                           src={item.cover_image_url}
@@ -476,6 +499,9 @@ export default function LandingPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                  <div className="px-4 py-3 border-t border-gray-100">
+                    <p className="text-sm font-medium text-gray-700 truncate">{item.title}</p>
                   </div>
                 </div>
               ))}
