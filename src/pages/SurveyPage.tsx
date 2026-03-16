@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { CheckCircle, AlertCircle, ChevronLeft, ChevronRight, Send, User, Phone, Mail } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { Survey, SurveyQuestion } from '../types';
 
@@ -12,6 +12,9 @@ export function SurveyPage() {
   const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<string, AnswerValue>>({});
   const [respondentName, setRespondentName] = useState('');
+  const [respondentPhone, setRespondentPhone] = useState('');
+  const [respondentEmail, setRespondentEmail] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const [step, setStep] = useState<'loading' | 'not-found' | 'expired' | 'form' | 'submitting' | 'success' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
   const [currentPage, setCurrentPage] = useState(0);
@@ -19,8 +22,14 @@ export function SurveyPage() {
 
   useEffect(() => {
     if (!id) { setStep('not-found'); return; }
-    loadSurvey();
+    checkAuthAndLoad();
   }, [id]);
+
+  const checkAuthAndLoad = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    setIsLoggedIn(!!user);
+    loadSurvey();
+  };
 
   const loadSurvey = async () => {
     try {
@@ -65,10 +74,17 @@ export function SurveyPage() {
   };
 
   const validate = (): boolean => {
+    if (!isLoggedIn && !survey?.is_anonymous) {
+      if (!respondentPhone.trim() || !respondentEmail.trim()) {
+        setErrorMsg('Lütfen cep telefonu ve e-posta adresinizi girin.');
+        return false;
+      }
+    }
     for (const q of questions) {
       if (!q.is_required) continue;
       const val = answers[q.id];
       if (val === undefined || val === '' || (Array.isArray(val) && val.length === 0)) {
+        setErrorMsg('Lütfen zorunlu soruları yanıtlayın.');
         return false;
       }
     }
@@ -77,10 +93,7 @@ export function SurveyPage() {
 
   const handleSubmit = async () => {
     if (!survey) return;
-    if (!validate()) {
-      setErrorMsg('Lütfen zorunlu soruları yanıtlayın.');
-      return;
-    }
+    if (!validate()) return;
     setErrorMsg('');
     setStep('submitting');
 
@@ -97,13 +110,20 @@ export function SurveyPage() {
         memberId = memberData?.id || null;
       }
 
+      const insertPayload: Record<string, unknown> = {
+        survey_id: survey.id,
+        member_id: memberId,
+        respondent_name: survey.is_anonymous ? null : (respondentName || null),
+      };
+
+      if (!isLoggedIn && !survey.is_anonymous) {
+        insertPayload.respondent_phone = respondentPhone.trim() || null;
+        insertPayload.respondent_email = respondentEmail.trim() || null;
+      }
+
       const { data: responseData, error: rError } = await supabase
         .from('survey_responses')
-        .insert({
-          survey_id: survey.id,
-          member_id: memberId,
-          respondent_name: survey.is_anonymous ? null : (respondentName || null),
-        })
+        .insert(insertPayload)
         .select()
         .single();
 
@@ -124,7 +144,6 @@ export function SurveyPage() {
         }
         return row;
       }).filter(r => {
-        const q = questions.find(q => q.id === r.question_id);
         const val = answers[r.question_id as string];
         return val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0);
       });
@@ -199,6 +218,8 @@ export function SurveyPage() {
 
   if (!survey) return null;
 
+  const showGuestContactForm = !isLoggedIn && !survey.is_anonymous && currentPage === 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-2xl mx-auto px-4 py-8">
@@ -238,7 +259,58 @@ export function SurveyPage() {
           )}
 
           <div className="p-6 space-y-6">
-            {!survey.is_anonymous && currentPage === 0 && (
+            {showGuestContactForm && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <User size={16} />
+                  <span className="text-sm font-medium">Katılımcı Bilgileri</span>
+                </div>
+                <p className="text-xs text-blue-600">Üye değilseniz lütfen aşağıdaki bilgileri doldurun. Üyeyseniz <a href="/login" className="underline font-medium">giriş yapabilirsiniz</a>.</p>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+                      <User size={12} />
+                      Adınız Soyadınız <span className="text-gray-400">(opsiyonel)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={respondentName}
+                      onChange={e => setRespondentName(e.target.value)}
+                      placeholder="Adınızı girin..."
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+                      <Phone size={12} />
+                      Cep Telefonu <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={respondentPhone}
+                      onChange={e => setRespondentPhone(e.target.value)}
+                      placeholder="05xx xxx xx xx"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
+                      <Mail size={12} />
+                      E-posta Adresi <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={respondentEmail}
+                      onChange={e => setRespondentEmail(e.target.value)}
+                      placeholder="ornek@email.com"
+                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!showGuestContactForm && !survey.is_anonymous && currentPage === 0 && isLoggedIn && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Adınız Soyadınız <span className="text-gray-400 text-xs">(opsiyonel)</span>

@@ -283,6 +283,8 @@ export interface SurveyResponse {
   survey_id: string;
   member_id?: string;
   respondent_name?: string;
+  respondent_phone?: string;
+  respondent_email?: string;
   submitted_at: string;
   ip_hash?: string;
   members?: Member;
