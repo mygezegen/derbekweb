@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag } from 'lucide-react';
+import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
 import { AddMemberModal } from './AddMemberModal';
 import { SocialMediaConfiguration } from './SocialMediaConfiguration';
 import VerificationManagement from './VerificationManagement';
 import { CategoryManagement } from './CategoryManagement';
+import { InventoryCategoryManagement } from './inventory/InventoryCategoryManagement';
 
 interface AdminPanelProps {
   onRefresh: () => void;
 }
 
 export function AdminPanel({ onRefresh }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'social' | 'verification' | 'categories'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'social' | 'verification' | 'categories' | 'inventory_categories'>('members');
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
@@ -226,6 +227,18 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
               <span className="hidden sm:inline">Kasa Kategorileri</span>
               <span className="sm:hidden">Kategoriler</span>
             </button>
+            <button
+              onClick={() => setActiveTab('inventory_categories')}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 sm:py-4 font-medium transition-colors whitespace-nowrap text-sm sm:text-base ${
+                activeTab === 'inventory_categories'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              <Package size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Envanter Kategorileri</span>
+              <span className="sm:hidden">Env. Kat.</span>
+            </button>
           </div>
         </div>
       </div>
@@ -339,6 +352,12 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
         <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-6">Kasa Kategori Yönetimi</h2>
           <CategoryManagement />
+        </div>
+      )}
+
+      {activeTab === 'inventory_categories' && (
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
+          <InventoryCategoryManagement />
         </div>
       )}
     </div>

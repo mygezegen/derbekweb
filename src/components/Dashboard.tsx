@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { EventsPage } from './EventsPage';
 import { DutyPharmacy } from './DutyPharmacy';
+import { InventoryManagement } from './inventory/InventoryManagement';
 import { supabase } from '../lib/supabase';
 import { Users, Calendar, DollarSign, TrendingUp, Activity } from 'lucide-react';
 
@@ -53,6 +54,8 @@ export function Dashboard() {
         return <EventsPage />;
       case 'pharmacy':
         return <DutyPharmacy />;
+      case 'inventory':
+        return <InventoryManagement />;
       case 'home':
         return (
           <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50">

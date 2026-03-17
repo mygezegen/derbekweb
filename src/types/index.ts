@@ -301,3 +301,84 @@ export interface SurveyAnswer {
   created_at: string;
   survey_questions?: SurveyQuestion;
 }
+
+export interface InventoryCategory {
+  id: string;
+  name: string;
+  parent_id: string | null;
+  description: string;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+  children?: InventoryCategory[];
+}
+
+export type InventoryStatus = 'available' | 'assigned' | 'maintenance' | 'retired';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category_id: string | null;
+  quantity: number;
+  available_quantity: number;
+  location: string;
+  status: InventoryStatus;
+  image_url: string;
+  description: string;
+  donor_name: string;
+  serial_number: string;
+  purchase_date: string | null;
+  purchase_price: number | null;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  inventory_categories?: InventoryCategory;
+}
+
+export interface InventoryAssignment {
+  id: string;
+  item_id: string;
+  assigned_to_member_id: string | null;
+  assigned_to_name: string;
+  quantity: number;
+  assigned_at: string;
+  due_date: string | null;
+  returned_at: string | null;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  inventory_items?: InventoryItem;
+  members?: Member;
+}
+
+export type MaintenanceStatus = 'reported' | 'in_progress' | 'resolved';
+
+export interface InventoryMaintenance {
+  id: string;
+  item_id: string;
+  reported_by: string | null;
+  description: string;
+  status: MaintenanceStatus;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_notes: string;
+  created_at: string;
+  updated_at: string;
+  inventory_items?: InventoryItem;
+  reporter?: Member;
+}
+
+export interface InventoryEventUsage {
+  id: string;
+  item_id: string;
+  event_id: string | null;
+  event_name: string;
+  quantity: number;
+  used_at: string;
+  returned_at: string | null;
+  notes: string;
+  created_by: string | null;
+  created_at: string;
+  inventory_items?: InventoryItem;
+}

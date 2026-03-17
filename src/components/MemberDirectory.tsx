@@ -100,8 +100,8 @@ export function MemberDirectory() {
 
   const filteredMembers = members.filter(
     (m) =>
-      m.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      m.email.toLowerCase().includes(search.toLowerCase()) ||
+      (m.full_name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+      (m.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
       (m.tc_identity_no && m.tc_identity_no.includes(search)) ||
       (m.registry_number && m.registry_number.includes(search)) ||
       (m.phone && m.phone.includes(search))
