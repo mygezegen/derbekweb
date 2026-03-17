@@ -120,13 +120,17 @@ export function SurveyPage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       let memberId: string | null = null;
+      let memberPhone: string | null = null;
+      let memberEmail: string | null = null;
       if (user) {
         const { data: memberData } = await supabase
           .from('members')
-          .select('id')
+          .select('id, phone, email')
           .eq('auth_id', user.id)
           .maybeSingle();
         memberId = memberData?.id || null;
+        memberPhone = memberData?.phone || null;
+        memberEmail = memberData?.email || null;
       }
 
       const insertPayload: Record<string, unknown> = {
@@ -135,7 +139,10 @@ export function SurveyPage() {
         respondent_name: survey.is_anonymous ? null : (respondentName || null),
       };
 
-      if (!isLoggedIn && !survey.is_anonymous) {
+      if (isLoggedIn) {
+        insertPayload.respondent_phone = memberPhone;
+        insertPayload.respondent_email = memberEmail;
+      } else if (!survey.is_anonymous) {
         insertPayload.respondent_phone = respondentPhone.trim() || null;
         insertPayload.respondent_email = respondentEmail.trim() || null;
       }
@@ -182,10 +189,17 @@ export function SurveyPage() {
   const needsGuestContactPage = !isLoggedIn && survey !== null && !survey.is_anonymous;
   const questionPageCount = Math.ceil(questions.length / questionsPerPage);
   const totalPages = needsGuestContactPage ? questionPageCount + 1 : questionPageCount;
-  const isContactPage = needsGuestContactPage && currentPage === totalPages - 1;
+  const isContactPage = needsGuestContactPage && currentPage === 0;
   const pageQuestions = isContactPage
     ? []
-    : questions.slice(currentPage * questionsPerPage, (currentPage + 1) * questionsPerPage);
+    : questions.slice(
+        needsGuestContactPage
+          ? (currentPage - 1) * questionsPerPage
+          : currentPage * questionsPerPage,
+        needsGuestContactPage
+          ? currentPage * questionsPerPage
+          : (currentPage + 1) * questionsPerPage
+      );
 
   if (step === 'loading') {
     return (
@@ -277,7 +291,7 @@ export function SurveyPage() {
           {totalPages > 1 && (
             <div className="px-6 pt-4">
               <div className="flex items-center justify-between text-xs text-gray-400 mb-2">
-                <span>{isContactPage ? 'Katılımcı Bilgileri' : `Bölüm ${currentPage + 1} / ${questionPageCount}`}</span>
+                <span>{isContactPage ? 'Katılımcı Bilgileri' : `Bölüm ${needsGuestContactPage ? currentPage : currentPage + 1} / ${questionPageCount}`}</span>
                 <span>{questions.length} soru</span>
               </div>
               <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -291,57 +305,67 @@ export function SurveyPage() {
 
           <div className="p-6 space-y-6">
             {isContactPage && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-4">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <User size={16} />
-                  <span className="text-sm font-medium">Katılımcı Bilgileri</span>
+              <div className="space-y-5">
+                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Phone size={16} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800 mb-0.5">Ankete devam etmek için telefon numaranızı girin</p>
+                    <p className="text-xs text-amber-700">Üye iseniz <a href="/login" className="underline font-semibold hover:text-amber-900 transition-colors">giriş yaparak</a> bilgilerinizle devam edebilirsiniz.</p>
+                  </div>
                 </div>
-                <p className="text-xs text-blue-600">Üye değilseniz lütfen aşağıdaki bilgileri doldurun. Üyeyseniz <a href="/login" className="underline font-medium">giriş yapabilirsiniz</a>.</p>
-                <div className="grid grid-cols-1 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                      <User size={12} />
-                      Adınız Soyadınız <span className="text-gray-400">(opsiyonel)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={respondentName}
-                      onChange={e => setRespondentName(e.target.value)}
-                      placeholder="Adınızı girin..."
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                      <Phone size={12} />
-                      Cep Telefonu <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={respondentPhone}
-                      onChange={e => setRespondentPhone(e.target.value)}
-                      placeholder="05xx xxx xx xx"
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1">
-                      <Mail size={12} />
-                      E-posta Adresi <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={respondentEmail}
-                      onChange={e => setRespondentEmail(e.target.value)}
-                      placeholder="ornek@email.com"
-                      className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    />
-                  </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                    <Phone size={14} className="text-red-500" />
+                    Cep Telefonu
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={respondentPhone}
+                    onChange={e => setRespondentPhone(e.target.value)}
+                    placeholder="05xx xxx xx xx"
+                    autoFocus
+                    className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-base font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                  />
+                  <p className="text-xs text-gray-400 mt-1.5">Yanıtınızı sizinle ilişkilendirmek için kullanılır.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-1.5">
+                    <Mail size={14} />
+                    E-posta Adresi
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={respondentEmail}
+                    onChange={e => setRespondentEmail(e.target.value)}
+                    placeholder="ornek@email.com"
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2 flex items-center gap-1.5">
+                    <User size={14} />
+                    Adınız Soyadınız
+                    <span className="text-xs text-gray-400 font-normal">(opsiyonel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={respondentName}
+                    onChange={e => setRespondentName(e.target.value)}
+                    placeholder="Adınızı girin..."
+                    className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
+                  />
                 </div>
               </div>
             )}
 
-            {!isContactPage && !survey.is_anonymous && currentPage === 0 && isLoggedIn && (
+            {!isContactPage && !survey.is_anonymous && (needsGuestContactPage ? currentPage === 1 : currentPage === 0) && isLoggedIn && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Adınız Soyadınız <span className="text-gray-400 text-xs">(opsiyonel)</span>
@@ -357,7 +381,8 @@ export function SurveyPage() {
             )}
 
             {pageQuestions.map((q, qi) => {
-              const globalIdx = currentPage * questionsPerPage + qi;
+              const questionPageIndex = needsGuestContactPage ? currentPage - 1 : currentPage;
+              const globalIdx = questionPageIndex * questionsPerPage + qi;
               return (
                 <div key={q.id} className="space-y-2">
                   <label className="block text-sm font-medium text-gray-800">

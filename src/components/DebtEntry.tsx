@@ -122,8 +122,8 @@ export function DebtEntry() {
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
-      member.full_name.toLowerCase().includes(searchLower) ||
-      member.email.toLowerCase().includes(searchLower)
+      (member.full_name && member.full_name.toLowerCase().includes(searchLower)) ||
+      (member.email && member.email.toLowerCase().includes(searchLower))
     );
   });
 
