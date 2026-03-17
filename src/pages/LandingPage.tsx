@@ -5,7 +5,7 @@ import {
   Calendar, Bell, Image, Mail, Phone, MapPin, ArrowRight, Clock, Users,
   MessageCircle, Youtube, Instagram, Facebook, LogIn, Landmark, CreditCard,
   Copy, Check, ChevronDown, Menu, X, Star, Heart, Globe, ClipboardList,
-  ChevronRight, Timer
+  ChevronRight, Timer, Cross, RefreshCw, AlertCircle, Map, Search
 } from 'lucide-react';
 import { PublicCalendarView } from '../components/PublicCalendarView';
 import { GalleryModal } from '../components/GalleryModal';
@@ -56,6 +56,22 @@ interface Survey {
   created_at: string;
   is_anonymous: boolean;
   question_count?: number;
+}
+
+interface Pharmacy {
+  pharmacyID: number;
+  pharmacyName: string;
+  address: string;
+  city: string;
+  district: string;
+  town: string | null;
+  directions: string;
+  phone: string;
+  phone2: string | null;
+  pharmacyDutyStart: string | null;
+  pharmacyDutyEnd: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface ContactInfo {
@@ -117,6 +133,12 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState('hero');
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [pharmacyLoading, setPharmacyLoading] = useState(false);
+  const [pharmacyError, setPharmacyError] = useState('');
+  const [pharmacyDistrict, setPharmacyDistrict] = useState('');
+  const [pharmacySearch, setPharmacySearch] = useState('');
+  const [pharmacyApiMissing, setPharmacyApiMissing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -151,6 +173,52 @@ export default function LandingPage() {
         ...s,
         question_count: Array.isArray(s.survey_questions) ? (s.survey_questions as {count: number}[])[0]?.count ?? 0 : 0,
       })) as Survey[]);
+    }
+  };
+
+  const ISTANBUL_DISTRICTS = [
+    'Adalar', 'Arnavutköy', 'Ataşehir', 'Avcılar', 'Bağcılar', 'Bahçelievler',
+    'Bakırköy', 'Başakşehir', 'Bayrampaşa', 'Beşiktaş', 'Beykoz', 'Beylikdüzü',
+    'Beyoğlu', 'Büyükçekmece', 'Çatalca', 'Çekmeköy', 'Esenler', 'Esenyurt',
+    'Eyüpsultan', 'Fatih', 'Gaziosmanpaşa', 'Güngören', 'Kadıköy', 'Kağıthane',
+    'Kartal', 'Küçükçekmece', 'Maltepe', 'Pendik', 'Sancaktepe', 'Sarıyer',
+    'Silivri', 'Sultanbeyli', 'Sultangazi', 'Şile', 'Şişli', 'Tuzla',
+    'Ümraniye', 'Üsküdar', 'Zeytinburnu',
+  ];
+
+  const fetchPharmacies = async (district?: string) => {
+    setPharmacyLoading(true);
+    setPharmacyError('');
+    setPharmacyApiMissing(false);
+    try {
+      const params = new URLSearchParams({ city: 'istanbul' });
+      if (district) {
+        params.set('district', district.toLowerCase()
+          .replace(/\s+/g, '-').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+          .replace(/ş/g, 's').replace(/ı/g, 'i').replace(/ö/g, 'o')
+          .replace(/ç/g, 'c').replace(/İ/g, 'i').replace(/Ğ/g, 'g')
+          .replace(/Ü/g, 'u').replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c'));
+      }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pharmacy-duty?${params}`;
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      let result: Record<string, unknown>;
+      try { result = await res.json(); } catch { throw new Error(`HTTP ${res.status}`); }
+      if (!res.ok) {
+        if (result.code === 'API_KEY_MISSING') { setPharmacyApiMissing(true); return; }
+        throw new Error((result.error as string) || `HTTP ${res.status}`);
+      }
+      const data = result.data as Pharmacy[] | undefined;
+      if (!data || !Array.isArray(data)) throw new Error('Geçersiz yanıt');
+      setPharmacies(data);
+    } catch (err: unknown) {
+      setPharmacyError(err instanceof Error ? err.message : 'Bir hata oluştu');
+    } finally {
+      setPharmacyLoading(false);
     }
   };
 
@@ -215,6 +283,7 @@ export default function LandingPage() {
     { id: 'anketler', label: 'Anketler' },
     { id: 'yonetim', label: 'Yönetim' },
     { id: 'galeri', label: 'Galeri' },
+    { id: 'nobetci-eczane', label: 'Nöbetçi Eczane' },
     { id: 'iletisim', label: 'İletişim' },
   ];
 
@@ -668,6 +737,155 @@ export default function LandingPage() {
               </div>
             </AnimatedSection>
           )}
+        </section>
+
+        {/* Duty Pharmacy */}
+        <section id="nobetci-eczane" className="py-20 border-t border-gray-100">
+          <AnimatedSection>
+            <div className="flex flex-col items-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-sm font-semibold mb-4">
+                <Cross size={15} />
+                Sağlık Hizmetleri
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-3">Nöbetçi Eczaneler</h2>
+              <div className="w-16 h-1 bg-gradient-to-r from-green-500 to-green-700 rounded-full" />
+              <p className="text-gray-500 text-sm mt-4 text-center max-w-xl">
+                İstanbul geneli güncel nöbetçi eczane bilgilerine ulaşın.
+              </p>
+            </div>
+          </AnimatedSection>
+
+          <AnimatedSection delay={100}>
+            <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 mb-6">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Eczane adı veya adres ara..."
+                    value={pharmacySearch}
+                    onChange={e => setPharmacySearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <select
+                  value={pharmacyDistrict}
+                  onChange={e => { setPharmacyDistrict(e.target.value); fetchPharmacies(e.target.value || undefined); }}
+                  className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white min-w-[180px]"
+                >
+                  <option value="">Tüm İlçeler</option>
+                  {ISTANBUL_DISTRICTS.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => fetchPharmacies(pharmacyDistrict || undefined)}
+                  disabled={pharmacyLoading}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 whitespace-nowrap"
+                >
+                  <RefreshCw size={15} className={pharmacyLoading ? 'animate-spin' : ''} />
+                  Yenile
+                </button>
+              </div>
+            </div>
+
+            {pharmacyApiMissing ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
+                <AlertCircle className="text-amber-500 flex-shrink-0 mt-0.5" size={20} />
+                <div>
+                  <h3 className="font-semibold text-amber-800 mb-1">API Anahtarı Gerekli</h3>
+                  <p className="text-amber-700 text-sm">Bu özelliği kullanmak için yönetici panelinden NosyAPI anahtarı tanımlanmalıdır.</p>
+                </div>
+              </div>
+            ) : pharmacyError ? (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-3">
+                <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
+                <p className="text-red-700 text-sm">{pharmacyError}</p>
+              </div>
+            ) : pharmacyLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600" />
+                <p className="text-gray-500 text-sm">Nöbetçi eczaneler yükleniyor...</p>
+              </div>
+            ) : pharmacies.length === 0 ? (
+              <div className="text-center py-16 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                <Cross size={40} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500 font-medium">Nöbetçi eczane bilgisi yüklemek için "Yenile" butonuna tıklayın.</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mb-4">
+                  <span className="font-semibold text-gray-700">
+                    {pharmacies.filter(p => {
+                      if (!pharmacySearch) return true;
+                      const q = pharmacySearch.toLowerCase();
+                      return p.pharmacyName.toLowerCase().includes(q) || p.address.toLowerCase().includes(q) || p.district.toLowerCase().includes(q);
+                    }).length}
+                  </span> nöbetçi eczane listeleniyor
+                  {pharmacyDistrict && <span> — <span className="text-green-600 font-medium">{pharmacyDistrict}</span></span>}
+                </p>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pharmacies
+                    .filter(p => {
+                      if (!pharmacySearch) return true;
+                      const q = pharmacySearch.toLowerCase();
+                      return p.pharmacyName.toLowerCase().includes(q) || p.address.toLowerCase().includes(q) || p.district.toLowerCase().includes(q);
+                    })
+                    .map(pharmacy => (
+                      <div key={pharmacy.pharmacyID} className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-200 transition-all duration-200 overflow-hidden">
+                        <div className="bg-gradient-to-r from-green-600 to-green-700 px-4 py-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-white text-sm leading-tight">{pharmacy.pharmacyName}</h3>
+                            <span className="flex-shrink-0 bg-white/20 text-white text-xs px-2 py-0.5 rounded-full whitespace-nowrap">
+                              {pharmacy.district}
+                            </span>
+                          </div>
+                          {pharmacy.town && <p className="text-green-100 text-xs mt-0.5">{pharmacy.town}</p>}
+                        </div>
+                        <div className="p-4 space-y-2.5">
+                          <div className="flex items-start gap-2">
+                            <MapPin size={14} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-gray-600 text-sm leading-relaxed">{pharmacy.address}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone size={14} className="text-gray-400 flex-shrink-0" />
+                            <a href={`tel:${pharmacy.phone.replace(/\s/g, '')}`} className="text-green-700 font-medium text-sm hover:underline">
+                              {pharmacy.phone}
+                            </a>
+                            {pharmacy.phone2 && (
+                              <a href={`tel:${pharmacy.phone2.replace(/\s/g, '')}`} className="text-green-600 text-sm hover:underline">
+                                / {pharmacy.phone2}
+                              </a>
+                            )}
+                          </div>
+                          {(pharmacy.pharmacyDutyStart || pharmacy.pharmacyDutyEnd) && (
+                            <div className="flex items-center gap-2">
+                              <Clock size={14} className="text-amber-500 flex-shrink-0" />
+                              <span className="text-gray-500 text-xs">
+                                {pharmacy.pharmacyDutyStart ? new Date(pharmacy.pharmacyDutyStart).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''} – {pharmacy.pharmacyDutyEnd ? new Date(pharmacy.pharmacyDutyEnd).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
+                              </span>
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              if (pharmacy.latitude && pharmacy.longitude) {
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${pharmacy.latitude},${pharmacy.longitude}`, '_blank');
+                              } else {
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pharmacy.pharmacyName + ' istanbul')}`, '_blank');
+                              }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-600 text-sm transition-colors"
+                          >
+                            <Map size={14} />
+                            Haritada Göster
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </>
+            )}
+          </AnimatedSection>
         </section>
 
         {/* Contact */}

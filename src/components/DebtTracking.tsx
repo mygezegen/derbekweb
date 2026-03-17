@@ -19,7 +19,7 @@ export function DebtTracking() {
         .select('*, dues(*), members(*)')
         .order('created_at', { ascending: false });
 
-      setMemberDues(data || []);
+      setMemberDues((data || []).filter(item => item.members?.is_active !== false && item.status !== 'cancelled'));
     } catch (error) {
       console.error('Error loading member dues:', error);
     } finally {

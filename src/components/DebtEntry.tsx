@@ -27,6 +27,7 @@ export function DebtEntry() {
       const { data } = await supabase
         .from('members')
         .select('*')
+        .eq('is_active', true)
         .order('full_name', { ascending: true });
       setMembers(data || []);
     } catch (error) {

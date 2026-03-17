@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -23,6 +23,7 @@ import { DutyPharmacy } from '../components/DutyPharmacy';
 import EmailVerificationCheck from '../components/EmailVerificationCheck';
 import { QRScannerPage } from '../components/QRScannerPage';
 import { SurveyManagement } from '../components/SurveyManagement';
+import { InventoryManagement } from '../components/inventory/InventoryManagement';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -31,7 +32,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -98,19 +99,22 @@ export function Dashboard({ onLogout }: DashboardProps) {
     try {
       const { count: totalMembers } = await supabase
         .from('members')
-        .select('*', { count: 'exact', head: true });
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true);
 
       const { data: debtData } = await supabase
         .from('member_dues')
-        .select('member_id, paid_amount, dues(amount)')
-        .neq('status', 'paid');
+        .select('member_id, paid_amount, dues(amount), members(is_active)')
+        .neq('status', 'paid')
+        .neq('status', 'cancelled');
 
-      const membersInDebt = new Set(debtData?.map(d => d.member_id)).size;
-      const totalDebtAmount = debtData?.reduce((sum, d: any) => {
+      const activeDebtData = (debtData || []).filter((d: any) => d.members?.is_active !== false);
+      const membersInDebt = new Set(activeDebtData.map((d: any) => d.member_id)).size;
+      const totalDebtAmount = activeDebtData.reduce((sum: number, d: any) => {
         const dueAmount = d.dues?.amount || 0;
         const paidAmount = d.paid_amount || 0;
         return sum + (dueAmount - paidAmount);
-      }, 0) || 0;
+      }, 0);
 
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
@@ -184,6 +188,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
       { id: 'notifications', label: 'Bildirimler', icon: MessageSquare, pageKey: 'notifications' },
     ] : []),
     ...((currentMember?.is_admin || currentMember?.is_root) ? [
+      { id: 'inventory', label: 'Envanter Yönetimi', icon: Package, pageKey: 'inventory' },
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
       { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
@@ -196,7 +201,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -522,6 +527,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
             currentMember={currentMember}
             isAdmin={currentMember.is_admin || currentMember.is_root}
           />
+        )}
+
+        {activeTab === 'inventory' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
+          <InventoryManagement />
         )}
           </div>
         </main>

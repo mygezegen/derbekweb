@@ -90,7 +90,9 @@ export interface MemberDues {
   id: string;
   member_id: string;
   dues_id: string;
-  status: 'pending' | 'paid' | 'overdue';
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  cancelled_at?: string;
+  cancelled_reason?: string;
   paid_amount: number;
   paid_at?: string;
   payment_method?: 'cash' | 'bank_transfer' | 'credit_card' | 'other';

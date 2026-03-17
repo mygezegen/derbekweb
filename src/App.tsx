@@ -8,6 +8,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Signup } from './pages/Signup';
 import { SurveyPage } from './pages/SurveyPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Debug: Environment variables
 console.log('🔍 Supabase Config Check:', {
@@ -86,6 +87,7 @@ function MemberPortal() {
 function App() {
   return (
     <ErrorBoundary>
+      <AuthProvider>
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -97,6 +99,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

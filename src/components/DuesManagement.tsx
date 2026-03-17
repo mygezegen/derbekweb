@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Dues, MemberDuesWithDetails, Member } from '../types';
-import { Plus, Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift, Users, Search, Save } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Trash2, DollarSign, Check, X, Download, AlertCircle, Receipt, FileText, Gift, Users, Search, Save } from 'lucide-react';
 import { DebtTracking } from './DebtTracking';
 import { PaymentCollection } from './PaymentCollection';
 import { DebtEntry } from './DebtEntry';
@@ -54,10 +54,9 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
 
         setDues(duesData || []);
 
-        // Tüm member_dues kayıtlarını tek sorguda çek
         const { data: allMemberDues, error: memberDuesError } = await supabase
           .from('member_dues')
-          .select('*, members(full_name, email, phone, tc_identity_no), dues(title, amount)')
+          .select('*, members(full_name, email, phone, tc_identity_no, is_active), dues(title, amount)')
           .order('status', { ascending: false });
 
         if (memberDuesError) {
@@ -66,20 +65,18 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
           return;
         }
 
-        // Tüm listeyi sakla (arama için)
-        setAllMemberDuesList(allMemberDues || []);
+        const activeOnlyDues = (allMemberDues || []).filter(md => md.members?.is_active !== false && md.status !== 'cancelled');
 
-        // Üyeleri dues_id'ye göre grupla
-        if (allMemberDues) {
-          const membersMap: { [key: string]: MemberDuesWithDetails[] } = {};
-          allMemberDues.forEach((memberDue) => {
-            if (!membersMap[memberDue.dues_id]) {
-              membersMap[memberDue.dues_id] = [];
-            }
-            membersMap[memberDue.dues_id].push(memberDue);
-          });
-          setDuesMembers(membersMap);
-        }
+        setAllMemberDuesList(activeOnlyDues);
+
+        const membersMap: { [key: string]: MemberDuesWithDetails[] } = {};
+        activeOnlyDues.forEach((memberDue) => {
+          if (!membersMap[memberDue.dues_id]) {
+            membersMap[memberDue.dues_id] = [];
+          }
+          membersMap[memberDue.dues_id].push(memberDue);
+        });
+        setDuesMembers(membersMap);
       } else {
         const { data: myDuesData } = await supabase
           .from('member_dues')
@@ -221,7 +218,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
 
   const getTotalDebt = () => {
     return myDues.reduce((sum, item) => {
-      if (item.status !== 'paid') {
+      if (item.status !== 'paid' && item.status !== 'cancelled') {
         const dueAmount = item.dues?.amount || 0;
         const paidAmount = item.paid_amount || 0;
         return sum + (dueAmount - paidAmount);
@@ -234,10 +231,15 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
     return myDues.filter(item => item.status === 'paid').length;
   };
 
+  const getVisibleDues = () => {
+    return myDues.filter(item => item.status !== 'cancelled');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid': return 'bg-green-100 text-green-800';
       case 'overdue': return 'bg-red-100 text-red-800';
+      case 'cancelled': return 'bg-gray-100 text-gray-500';
       default: return 'bg-yellow-100 text-yellow-800';
     }
   };
@@ -246,6 +248,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
     switch (status) {
       case 'paid': return 'Ödendi';
       case 'overdue': return 'Gecikmiş';
+      case 'cancelled': return 'İptal Edildi';
       default: return 'Bekliyor';
     }
   };
@@ -783,7 +786,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
           <div className="flex items-center gap-3 mb-2">
             <DollarSign className="text-yellow-600" size={32} />
             <div className="text-3xl font-bold text-yellow-600">
-              {myDues.length - getPaidCount()}
+              {getVisibleDues().length - getPaidCount()}
             </div>
           </div>
           <p className="text-gray-600 font-medium">Bekleyen Aidat</p>
@@ -803,7 +806,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {myDues.map((item) => {
+            {getVisibleDues().map((item) => {
               const dueAmount = item.dues?.amount || 0;
               const paidAmount = item.paid_amount || 0;
               const remaining = dueAmount - paidAmount;
@@ -825,7 +828,7 @@ export function DuesManagement({ currentMember, isAdmin, isRoot = false }: DuesM
                 </tr>
               );
             })}
-            {myDues.length === 0 && (
+            {getVisibleDues().length === 0 && (
               <tr>
                 <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                   Aidat kaydı bulunmuyor

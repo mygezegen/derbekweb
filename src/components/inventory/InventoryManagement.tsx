@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Package, Plus, Search, Filter, Grid3x3 as Grid3X3, List, Eye, CreditCard as Edit2, Trash2, UserCheck, RotateCcw, Wrench, AlertTriangle, Tag, MapPin, TrendingDown, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
 import { InventoryItem, InventoryCategory } from '../../types';
 import { InventoryItemForm } from './InventoryItemForm';
 import { AssignmentModal } from './AssignmentModal';
@@ -26,8 +25,19 @@ interface Stats {
 }
 
 export function InventoryManagement() {
-  const { member } = useAuth();
-  const isAdmin = member?.is_admin || member?.is_root;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('members')
+        .select('is_admin, is_root')
+        .eq('auth_id', user.id)
+        .maybeSingle();
+      if (data) setIsAdmin(!!(data.is_admin || data.is_root));
+    });
+  }, []);
 
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<InventoryCategory[]>([]);

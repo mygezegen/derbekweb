@@ -27,7 +27,7 @@ export function Dashboard() {
     setLoading(true);
     try {
       const [membersRes, eventsRes, treasuryRes, duesRes, auditRes] = await Promise.all([
-        supabase.from('members').select('id', { count: 'exact', head: true }),
+        supabase.from('members').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('events').select('id', { count: 'exact', head: true }).gte('event_date', new Date().toISOString()),
         supabase.from('treasury_summary').select('total_balance').maybeSingle(),
         supabase.from('member_dues').select('id', { count: 'exact', head: true }).eq('payment_status', 'unpaid'),
