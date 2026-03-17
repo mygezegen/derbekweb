@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member, Dues, MemberDuesWithDetails } from '../types';
-import { Search, DollarSign, Check, X, Save, Edit2, Trash2 } from 'lucide-react';
+import { Search, DollarSign, Check, X, Save, CreditCard as Edit2, Trash2 } from 'lucide-react';
 
 function numberToTurkishWords(n: number): string {
   if (n === 0) return 'Sıfır';
@@ -83,8 +83,8 @@ export function PaymentCollection() {
   };
 
   const filteredMembers = members.filter(m =>
-    m.full_name.toLowerCase().includes(search.toLowerCase()) ||
-    m.email.toLowerCase().includes(search.toLowerCase()) ||
+    (m.full_name && m.full_name.toLowerCase().includes(search.toLowerCase())) ||
+    (m.email && m.email.toLowerCase().includes(search.toLowerCase())) ||
     (m.phone && m.phone.includes(search)) ||
     (m.tc_identity_no && m.tc_identity_no.includes(search))
   );
