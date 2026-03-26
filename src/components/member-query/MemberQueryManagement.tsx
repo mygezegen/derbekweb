@@ -32,8 +32,7 @@ export function MemberQueryManagement() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-  const queryUrl = `${supabaseUrl}/functions/v1/member-query`;
+  const queryUrl = `${window.location.origin}/api/member-query`;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -229,7 +228,6 @@ export function MemberQueryManagement() {
               onAdd={addClient}
               onUpdate={updateClient}
               onDelete={deleteClient}
-              supabaseUrl={supabaseUrl}
             />
           </div>
         )}

@@ -8,7 +8,6 @@ interface Props {
   onAdd: (data: Partial<ApiClient>) => Promise<string>;
   onUpdate: (id: string, data: Partial<ApiClient>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  supabaseUrl: string;
 }
 
 function ClientForm({
@@ -282,12 +281,12 @@ function NewKeyDisplay({ apiKey, queryUrl, onClose }: { apiKey: string; queryUrl
   );
 }
 
-export function ClientManager({ clients, templates, onAdd, onUpdate, onDelete, supabaseUrl }: Props) {
+export function ClientManager({ clients, templates, onAdd, onUpdate, onDelete }: Props) {
   const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState<{ key: string; url: string } | null>(null);
 
-  const queryUrl = `${supabaseUrl}/functions/v1/member-query`;
+  const queryUrl = `${window.location.origin}/api/member-query`;
 
   const handleAdd = async (data: Partial<ApiClient>) => {
     const generatedKey = await onAdd(data);
