@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   Search, ArrowLeft, CheckCircle, XCircle, AlertCircle, Loader2,
-  User, Shield, CreditCard, Tag, TrendingDown, LogIn, Star,
+  User, Shield, CreditCard, Tag, TrendingDown, LogIn, Star, Phone,
 } from 'lucide-react';
 
 type QueryStatus = 'idle' | 'loading' | 'found' | 'not_found' | 'error';
@@ -25,6 +25,8 @@ interface PageConfig {
   orgName: string;
   orgSubtitle: string;
   currentYear: number;
+  supportName: string;
+  supportPhone: string;
 }
 
 export function MemberQueryPage() {
@@ -42,6 +44,8 @@ export function MemberQueryPage() {
     orgName: 'Dernek',
     orgSubtitle: '',
     currentYear: new Date().getFullYear(),
+    supportName: '',
+    supportPhone: '',
   });
 
   useEffect(() => {
@@ -52,11 +56,17 @@ export function MemberQueryPage() {
 
   useEffect(() => {
     const loadConfig = async () => {
-      const [queryPageRes, orgNameRes, contactRes] = await Promise.all([
+      const [queryPageRes, orgNameRes, contactRes, supportRes] = await Promise.all([
         supabase.from('page_settings').select('page_name, description').eq('page_key', 'member_query').maybeSingle(),
         supabase.from('page_settings').select('page_name, description').eq('page_key', 'org_name').maybeSingle(),
         supabase.from('contact_info').select('address').limit(1).maybeSingle(),
+        supabase.from('page_settings').select('page_name, description').eq('page_key', 'member_query_support').maybeSingle(),
       ]);
+
+      const supportRaw = supportRes.data?.description || '';
+      const [supportName, supportPhone] = supportRaw.includes('|')
+        ? supportRaw.split('|')
+        : [supportRaw, ''];
 
       setConfig({
         title: queryPageRes.data?.page_name || 'Üyelik Sorgulama',
@@ -64,6 +74,8 @@ export function MemberQueryPage() {
         orgName: orgNameRes.data?.page_name || 'Dernek',
         orgSubtitle: orgNameRes.data?.description || (contactRes.data?.address ? String(contactRes.data.address) : ''),
         currentYear: new Date().getFullYear(),
+        supportName: supportName.trim(),
+        supportPhone: supportPhone.trim(),
       });
     };
     loadConfig();
@@ -150,41 +162,97 @@ export function MemberQueryPage() {
 
   const buildDiscountDescription = (info: DebtInfo) => {
     if (info.total_debt === 0)
-      return `Borcunuz bulunmamaktadır. İndirim oranı: %${info.discount_rate}`;
+      return 'Borcunuz bulunmamaktadır. İndirimden yararlanabilirsiniz.';
     if (info.discount_eligible)
-      return `Toplam borcunuz ${info.total_debt.toLocaleString('tr-TR')} TL olup ${info.discount_threshold} TL limitinin altındadır.`;
-    return `Toplam borcunuz ${info.total_debt.toLocaleString('tr-TR')} TL olup ${info.discount_threshold} TL limitini aştığı için indirimden yararlanamaz.`;
+      return `Borcunuz indirim limitinin altında olduğundan indirimden yararlanabilirsiniz.`;
+    return `Borcunuz ${info.discount_threshold.toLocaleString('tr-TR')} TL limitini aştığı için indirimden yararlanamaz.`;
   };
 
   const renderValue = (key: string, val: MemberData[string]) => {
-    if (typeof val === 'boolean') {
-      return val ? (
-        <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-sm">
-          <CheckCircle size={14} /> Evet
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm">
-          <XCircle size={14} /> Hayır
-        </span>
-      );
-    }
     if (val === null || val === undefined || val === '') return <span className="text-gray-400">—</span>;
 
-    const valStr = String(val);
-    const lowerKey = key.toLowerCase();
-    if (lowerKey.includes('durum') || lowerKey.includes('status')) {
-      const isActive = valStr.toLowerCase().includes('aktif');
-      return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-          isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-          {valStr}
-        </span>
-      );
-    }
+    switch (key) {
+      case 'is_active':
+      case 'aktif_mi': {
+        const active = val === true || val === 'true' || val === 'Evet' || val === 1;
+        return (
+          <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${active ? 'text-emerald-700' : 'text-red-600'}`}>
+            {active ? <CheckCircle size={14} /> : <XCircle size={14} />}
+            {active ? 'Evet' : 'Hayır'}
+          </span>
+        );
+      }
 
-    return <span className="text-gray-800 text-sm">{valStr}</span>;
+      case 'membership_status':
+      case 'uyelik_durumu': {
+        const valStr = String(val);
+        const isActive = valStr.toLowerCase().includes('aktif');
+        const isCancelled = valStr.toLowerCase().includes('iptal') || valStr.toLowerCase().includes('pasif');
+        const color = isActive
+          ? 'bg-emerald-100 text-emerald-700'
+          : isCancelled
+            ? 'bg-red-100 text-red-600'
+            : 'bg-gray-100 text-gray-600';
+        const dot = isActive ? 'bg-emerald-500' : isCancelled ? 'bg-red-500' : 'bg-gray-400';
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${color}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+            {valStr}
+          </span>
+        );
+      }
+
+      case 'due_status':
+      case 'aidat_durumu': {
+        const valStr = String(val);
+        const isPaid = valStr.toLowerCase().includes('ödendi') || valStr.toLowerCase().includes('tamam') || valStr.toLowerCase().includes('guncel') || valStr.toLowerCase().includes('güncel');
+        return (
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+            isPaid ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isPaid ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            {valStr}
+          </span>
+        );
+      }
+
+      case 'due_amount':
+      case 'toplam_borc': {
+        const amount = Number(val);
+        const isZero = amount === 0;
+        return (
+          <span className={`text-sm font-bold ${isZero ? 'text-emerald-700' : 'text-red-600'}`}>
+            {isZero ? 'Borçsuz' : `${amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`}
+          </span>
+        );
+      }
+
+      case 'discount_eligible':
+      case 'indirim_hakki': {
+        const eligible = val === true || val === 'true' || val === 'Evet' || val === 1;
+        return (
+          <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${eligible ? 'text-emerald-700' : 'text-red-600'}`}>
+            {eligible ? <CheckCircle size={14} /> : <XCircle size={14} />}
+            {eligible ? 'Var' : 'Yok'}
+          </span>
+        );
+      }
+
+      default: {
+        if (typeof val === 'boolean') {
+          return val ? (
+            <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold text-sm">
+              <CheckCircle size={14} /> Evet
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-red-600 font-semibold text-sm">
+              <XCircle size={14} /> Hayır
+            </span>
+          );
+        }
+        return <span className="text-gray-800 text-sm">{String(val)}</span>;
+      }
+    }
   };
 
   return (
@@ -402,7 +470,7 @@ export function MemberQueryPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-bold text-base">
                       {debtInfo.discount_eligible
-                        ? `%${debtInfo.discount_rate} İndirim Hakkınız Var`
+                        ? 'İndirim Hakkınız Var'
                         : 'İndirim Hakkı Yok'
                       }
                     </p>
@@ -412,33 +480,14 @@ export function MemberQueryPage() {
                   </div>
                 </div>
 
-                <div className={`px-6 py-4 flex items-center justify-between ${
+                <div className={`px-6 py-4 ${
                   debtInfo.discount_eligible ? 'bg-emerald-50' : 'bg-red-50'
                 }`}>
-                  <div>
-                    <p className={`text-xs font-bold uppercase tracking-wider ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
-                      Toplam Borç
-                    </p>
-                    <p className={`text-xl font-black mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-800' : 'text-red-800'}`}>
-                      {formatDebtAmount(debtInfo.total_debt)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`text-xs font-bold uppercase tracking-wider ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {debtInfo.discount_eligible ? 'İndirim Oranı' : 'Gerekli Oran'}
-                    </p>
-                    <p className={`text-4xl font-black mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-300'}`}>
-                      %{debtInfo.discount_rate}
-                    </p>
-                  </div>
-                </div>
-
-                <div className={`px-6 py-3 border-t ${debtInfo.discount_eligible ? 'bg-emerald-50/50 border-emerald-100' : 'bg-red-50/50 border-red-100'}`}>
-                  <p className={`text-xs ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-500'}`}>
-                    {debtInfo.discount_eligible
-                      ? `Borç limiti: ${debtInfo.discount_threshold.toLocaleString('tr-TR')} TL altı`
-                      : `İndirim için borç limiti: ${debtInfo.discount_threshold.toLocaleString('tr-TR')} TL altı olmalıdır`
-                    }
+                  <p className={`text-xs font-bold uppercase tracking-wider ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
+                    Toplam Borç
+                  </p>
+                  <p className={`text-xl font-black mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-800' : 'text-red-800'}`}>
+                    {formatDebtAmount(debtInfo.total_debt)}
                   </p>
                 </div>
               </div>
@@ -487,6 +536,37 @@ export function MemberQueryPage() {
                   <Star size={14} />
                   Üye Ol
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {(config.supportName || config.supportPhone) && (
+          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-2xl p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Phone size={17} className="text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-blue-800">Teknik Sorunlar İçin İrtibat</p>
+                <p className="text-xs text-blue-600 mt-0.5">Sorgu ile ilgili bir sorun yaşıyorsanız aşağıdaki kişiyle iletişime geçebilirsiniz.</p>
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                  {config.supportName && (
+                    <span className="text-sm font-bold text-blue-900">{config.supportName}</span>
+                  )}
+                  {config.supportName && config.supportPhone && (
+                    <span className="hidden sm:block text-blue-300">—</span>
+                  )}
+                  {config.supportPhone && (
+                    <a
+                      href={`tel:${config.supportPhone.replace(/\s/g, '')}`}
+                      className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 hover:text-blue-900 transition-colors"
+                    >
+                      <Phone size={13} />
+                      {config.supportPhone}
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
