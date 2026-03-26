@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -24,6 +24,8 @@ import EmailVerificationCheck from '../components/EmailVerificationCheck';
 import { QRScannerPage } from '../components/QRScannerPage';
 import { SurveyManagement } from '../components/SurveyManagement';
 import { InventoryManagement } from '../components/inventory/InventoryManagement';
+import { SocialMediaMonitor } from '../components/social-monitor/SocialMediaMonitor';
+import { MemberQueryManagement } from '../components/member-query/MemberQueryManagement';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -32,7 +34,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory' | 'social-monitor' | 'member-query'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -189,6 +191,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
     ] : []),
     ...((currentMember?.is_admin || currentMember?.is_root) ? [
       { id: 'inventory', label: 'Envanter Yönetimi', icon: Package, pageKey: 'inventory' },
+      { id: 'social-monitor', label: 'Sosyal Medya İzleme', icon: TrendingUp, pageKey: 'social-monitor' },
+      { id: 'member-query', label: 'Üye Sorgu API', icon: Globe, pageKey: 'member-query' },
       { id: 'bulk', label: 'Toplu İşlemler', icon: PackagePlus, pageKey: 'bulk' },
       { id: 'admin', label: 'Yönetim', icon: Settings, pageKey: 'admin' },
       { id: 'board', label: 'Dernek Yönetimi', icon: UserCog, pageKey: 'board' },
@@ -201,7 +205,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory' || tab.pageKey === 'social-monitor' || tab.pageKey === 'member-query') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -531,6 +535,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'inventory' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
           <InventoryManagement />
+        )}
+
+        {activeTab === 'social-monitor' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
+          <SocialMediaMonitor currentMember={currentMember} />
+        )}
+
+        {activeTab === 'member-query' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
+          <MemberQueryManagement />
         )}
           </div>
         </main>

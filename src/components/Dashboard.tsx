@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { EventsPage } from './EventsPage';
 import { DutyPharmacy } from './DutyPharmacy';
 import { InventoryManagement } from './inventory/InventoryManagement';
+import { SocialMediaMonitoring } from './social/SocialMediaMonitoring';
 import { supabase } from '../lib/supabase';
 import { Users, Calendar, DollarSign, TrendingUp, Activity } from 'lucide-react';
 
@@ -56,6 +57,8 @@ export function Dashboard() {
         return <DutyPharmacy />;
       case 'inventory':
         return <InventoryManagement />;
+      case 'social-monitor':
+        return <SocialMediaMonitoring />;
       case 'home':
         return (
           <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50">
