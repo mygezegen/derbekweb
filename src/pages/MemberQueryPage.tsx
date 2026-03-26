@@ -39,12 +39,16 @@ export function MemberQueryPage() {
     setErrorMsg('');
 
     try {
-      const url = new URL(`${window.location.origin}/api/member-query`);
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-query`;
+      const url = new URL(baseUrl);
       url.searchParams.set('tc', tcClean);
 
       const res = await fetch(url.toString(), {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
       });
 
       const data = await res.json();

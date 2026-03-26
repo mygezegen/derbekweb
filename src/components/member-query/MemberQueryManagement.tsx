@@ -32,7 +32,7 @@ export function MemberQueryManagement() {
   const [logsLoading, setLogsLoading] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
 
-  const queryUrl = `${window.location.origin}/api/member-query`;
+  const queryUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-query`;
 
   const loadData = useCallback(async () => {
     setLoading(true);
