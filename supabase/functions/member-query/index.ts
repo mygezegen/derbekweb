@@ -9,6 +9,12 @@ const corsHeaders = {
 
 const DISCOUNT_THRESHOLD = 700;
 
+function calculateDiscountRate(totalDebt: number): number {
+  if (totalDebt === 0) return 100;
+  if (totalDebt < DISCOUNT_THRESHOLD) return 50;
+  return 0;
+}
+
 async function sha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -29,7 +35,7 @@ function getClientIp(req: Request): string {
 async function calculateTotalDebt(
   supabase: ReturnType<typeof createClient>,
   memberId: string
-): Promise<{ total_debt: number; discount_eligible: boolean; discount_threshold: number }> {
+): Promise<{ total_debt: number; discount_eligible: boolean; discount_threshold: number; discount_rate: number }> {
   const { data: memberDues } = await supabase
     .from("member_dues")
     .select("status, paid_amount, dues_id")
@@ -37,7 +43,7 @@ async function calculateTotalDebt(
     .in("status", ["pending", "overdue"]);
 
   if (!memberDues || memberDues.length === 0) {
-    return { total_debt: 0, discount_eligible: true, discount_threshold: DISCOUNT_THRESHOLD };
+    return { total_debt: 0, discount_eligible: true, discount_threshold: DISCOUNT_THRESHOLD, discount_rate: 100 };
   }
 
   const duesIds = memberDues.map((d: { dues_id: string }) => d.dues_id).filter(Boolean);
@@ -62,10 +68,12 @@ async function calculateTotalDebt(
     }
   }
 
+  const roundedDebt = Math.round(totalDebt * 100) / 100;
   return {
-    total_debt: Math.round(totalDebt * 100) / 100,
-    discount_eligible: totalDebt < DISCOUNT_THRESHOLD,
+    total_debt: roundedDebt,
+    discount_eligible: roundedDebt < DISCOUNT_THRESHOLD,
     discount_threshold: DISCOUNT_THRESHOLD,
+    discount_rate: calculateDiscountRate(roundedDebt),
   };
 }
 
@@ -282,11 +290,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: member } = await supabase
+    const { data: member, error: memberError } = await supabase
       .from("members")
-      .select("id, full_name, email, phone, address, is_active, is_admin, occupation, neighborhood, city, created_at, membership_start_date, tc_identity_no")
+      .select("id, full_name, email, phone, address, is_active, is_admin, profession, province, district, registration_date, joined_at, tc_identity_no")
       .eq("tc_identity_no", tcClean)
       .maybeSingle();
+
+    if (memberError) {
+      console.error("member query error:", memberError);
+      await supabase.from("query_logs").insert({
+        client_id: client.id,
+        client_name: client.name,
+        queried_tc: tcClean,
+        ip_address: ip,
+        user_agent: userAgent,
+        status: "error",
+        error_message: `DB sorgu hatasi: ${memberError.message}`,
+      });
+      return new Response(
+        JSON.stringify({ success: false, error: "Veritabani sorgu hatasi olustu." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const template = client.query_response_templates as { fields: Array<{ key: string; label: string; enabled: boolean }> } | null;
     const templateFields: Array<{ key: string; label: string; enabled: boolean }> =
@@ -321,13 +346,13 @@ Deno.serve(async (req: Request) => {
         } else if (key === "address") {
           responseData[field.label] = member.address || null;
         } else if (key === "occupation") {
-          responseData[field.label] = member.occupation || null;
+          responseData[field.label] = member.profession || null;
         } else if (key === "neighborhood") {
-          responseData[field.label] = member.neighborhood || null;
+          responseData[field.label] = member.district || null;
         } else if (key === "city") {
-          responseData[field.label] = member.city || null;
+          responseData[field.label] = member.province || null;
         } else if (key === "member_since") {
-          const d = member.membership_start_date || member.created_at;
+          const d = member.registration_date || member.joined_at;
           responseData[field.label] = d ? new Date(d).toLocaleDateString("tr-TR") : null;
         } else if (key === "due_status") {
           const { data: dues } = await supabase
@@ -343,6 +368,11 @@ Deno.serve(async (req: Request) => {
           const dueAmountResult = await calculateTotalDebt(supabase, member.id);
           responseData[field.label] = dueAmountResult.total_debt;
           debtInfo = dueAmountResult;
+        } else if (key === "discount_eligible") {
+          if (!debtInfo) {
+            debtInfo = await calculateTotalDebt(supabase, member.id);
+          }
+          responseData[field.label] = debtInfo.discount_eligible ? `%${debtInfo.discount_rate} indirim hakkiniz var` : "Indirim hakki yok";
         }
       }
 

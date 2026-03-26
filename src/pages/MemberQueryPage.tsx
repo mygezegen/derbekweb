@@ -12,6 +12,7 @@ interface DebtInfo {
   total_debt: number;
   discount_eligible: boolean;
   discount_threshold: number;
+  discount_rate: number;
 }
 
 export function MemberQueryPage() {
@@ -262,16 +263,16 @@ export function MemberQueryPage() {
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-bold ${debtInfo.discount_eligible ? 'text-emerald-800' : 'text-red-800'}`}>
                         {debtInfo.discount_eligible
-                          ? 'Indirimden Yararlanabilirsiniz'
-                          : 'Borc Limiti Asildi'
+                          ? `%${debtInfo.discount_rate} Indirim Hakkiniz Var`
+                          : 'Indirim Hakki Yok'
                         }
                       </p>
                       <p className={`text-xs mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-700'}`}>
                         {debtInfo.total_debt === 0
-                          ? 'Borcunuz bulunmamaktadir, indirimlerden tam olarak yararlanabilirsiniz.'
+                          ? `Borcunuz bulunmamaktadir. Tam indirim orani: %${debtInfo.discount_rate}`
                           : debtInfo.discount_eligible
-                            ? `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitinin altindadir.`
-                            : `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitini astigindan indirimden yararlanamaz.`
+                            ? `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitinin altinda. Indirim oraniniz: %${debtInfo.discount_rate}`
+                            : `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitini astigi icin indirimden yararlanamaz.`
                         }
                       </p>
                     </div>
@@ -286,6 +287,14 @@ export function MemberQueryPage() {
                         ? 'Borcsuz'
                         : `${debtInfo.total_debt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`
                       }
+                    </span>
+                  </div>
+                  <div className="px-5 pb-4 flex items-center justify-between border-t border-dashed border-current/10 pt-3">
+                    <span className={`text-xs font-semibold uppercase tracking-wide ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
+                      Indirim Orani
+                    </span>
+                    <span className={`text-2xl font-black ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-400'}`}>
+                      %{debtInfo.discount_rate}
                     </span>
                   </div>
                 </div>
