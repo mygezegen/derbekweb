@@ -57,6 +57,8 @@ export const ALL_TEMPLATE_FIELDS: TemplateField[] = [
   { key: 'neighborhood', label: 'Mahalle/Koy', enabled: false },
   { key: 'city', label: 'Sehir', enabled: false },
   { key: 'due_status', label: 'Aidat Durumu', enabled: false },
+  { key: 'due_amount', label: 'Toplam Borc', enabled: false },
+  { key: 'discount_eligible', label: 'Indirim Hakki', enabled: false },
 ];
 
 export const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
