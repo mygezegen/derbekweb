@@ -196,9 +196,10 @@ function ClientForm({
   );
 }
 
-function NewKeyDisplay({ apiKey, queryUrl, onClose }: { apiKey: string; queryUrl: string; onClose: () => void }) {
+function NewKeyDisplay({ apiKey, queryUrl, apiUrl, onClose }: { apiKey: string; queryUrl: string; apiUrl: string; onClose: () => void }) {
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedApi, setCopiedApi] = useState(false);
   const [showKey, setShowKey] = useState(false);
 
   const copyToClipboard = async (text: string, setter: (v: boolean) => void) => {
@@ -209,7 +210,7 @@ function NewKeyDisplay({ apiKey, queryUrl, onClose }: { apiKey: string; queryUrl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
@@ -241,7 +242,10 @@ function NewKeyDisplay({ apiKey, queryUrl, onClose }: { apiKey: string; queryUrl
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-2">Sorgu URL</label>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                Uye Sorgulama Sayfasi
+                <span className="text-gray-400 font-normal ml-1 normal-case">(tarayicida acilir)</span>
+              </label>
               <div className="flex items-center gap-2 bg-blue-50 rounded-xl p-3 border border-blue-200">
                 <code className="flex-1 text-xs font-mono text-blue-800 break-all">{queryUrl}</code>
                 <button
@@ -253,16 +257,35 @@ function NewKeyDisplay({ apiKey, queryUrl, onClose }: { apiKey: string; queryUrl
               </div>
             </div>
 
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                API Endpoint
+                <span className="text-gray-400 font-normal ml-1 normal-case">(sistem entegrasyonu)</span>
+              </label>
+              <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                <code className="flex-1 text-xs font-mono text-slate-700 break-all">{apiUrl}</code>
+                <button
+                  onClick={() => copyToClipboard(apiUrl, setCopiedApi)}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 flex-shrink-0"
+                >
+                  {copiedApi ? <CheckCircle size={15} className="text-green-500" /> : <Copy size={15} />}
+                </button>
+              </div>
+            </div>
+
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <div className="flex items-start gap-2">
                 <AlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
                 <div className="text-xs text-amber-700 space-y-1">
-                  <p className="font-semibold">Kullanim Ornekleri:</p>
+                  <p className="font-semibold">API Kullanim Ornegi (POST):</p>
                   <p className="font-mono bg-amber-100 px-2 py-1 rounded text-xs break-all">
-                    GET {queryUrl}?tc=12345678901&api_key=YOUR_KEY
+                    POST {apiUrl}
                   </p>
                   <p className="font-mono bg-amber-100 px-2 py-1 rounded text-xs">
-                    POST ile: X-Api-Key header + body {'{'}"tc": "12345678901"{'}'}
+                    Header: X-Api-Key: YOUR_KEY
+                  </p>
+                  <p className="font-mono bg-amber-100 px-2 py-1 rounded text-xs">
+                    Body: {'{'}"tc": "12345678901"{'}'}
                   </p>
                 </div>
               </div>
@@ -286,7 +309,8 @@ export function ClientManager({ clients, templates, onAdd, onUpdate, onDelete }:
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newKeyData, setNewKeyData] = useState<{ key: string; url: string } | null>(null);
 
-  const queryUrl = `${window.location.origin}/api/member-query`;
+  const queryUrl = `${window.location.origin}/sorgu`;
+  const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-query`;
 
   const handleAdd = async (data: Partial<ApiClient>) => {
     const generatedKey = await onAdd(data);
@@ -402,6 +426,7 @@ export function ClientManager({ clients, templates, onAdd, onUpdate, onDelete }:
         <NewKeyDisplay
           apiKey={newKeyData.key}
           queryUrl={queryUrl}
+          apiUrl={apiUrl}
           onClose={() => setNewKeyData(null)}
         />
       )}

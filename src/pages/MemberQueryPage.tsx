@@ -40,15 +40,14 @@ export function MemberQueryPage() {
 
     try {
       const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/member-query`;
-      const url = new URL(baseUrl);
-      url.searchParams.set('tc', tcClean);
 
-      const res = await fetch(url.toString(), {
-        method: 'GET',
+      const res = await fetch(baseUrl, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
+        body: JSON.stringify({ tc: tcClean }),
       });
 
       const data = await res.json();
