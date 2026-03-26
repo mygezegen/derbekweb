@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Plus, CreditCard as Edit2, Trash2, Save, X, ChevronDown, ChevronUp, CheckSquare, Square, Star } from 'lucide-react';
+import { Plus, CreditCard as Edit2, Trash2, Save, X, ChevronDown, ChevronUp, CheckSquare, Square, Star, Percent } from 'lucide-react';
 import { QueryResponseTemplate, TemplateField, ALL_TEMPLATE_FIELDS } from './types';
 
 interface Props {
   templates: QueryResponseTemplate[];
-  onAdd: (name: string, description: string, fields: TemplateField[]) => Promise<void>;
-  onUpdate: (id: string, name: string, description: string, fields: TemplateField[]) => Promise<void>;
+  onAdd: (name: string, description: string, fields: TemplateField[], discountRate: number, discountThreshold: number) => Promise<void>;
+  onUpdate: (id: string, name: string, description: string, fields: TemplateField[], discountRate: number, discountThreshold: number) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -15,11 +15,13 @@ function TemplateForm({
   onCancel,
 }: {
   initial?: QueryResponseTemplate;
-  onSave: (name: string, description: string, fields: TemplateField[]) => Promise<void>;
+  onSave: (name: string, description: string, fields: TemplateField[], discountRate: number, discountThreshold: number) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
+  const [discountRate, setDiscountRate] = useState<number>(initial?.discount_rate ?? 50);
+  const [discountThreshold, setDiscountThreshold] = useState<number>(initial?.discount_threshold ?? 700);
   const [fields, setFields] = useState<TemplateField[]>(() => {
     if (initial?.fields && initial.fields.length > 0) {
       const existingKeys = new Set(initial.fields.map(f => f.key));
@@ -37,11 +39,13 @@ function TemplateForm({
     setFields(prev => prev.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f));
   };
 
+  const discountFieldEnabled = fields.find(f => f.key === 'discount_eligible')?.enabled ?? false;
+
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await onSave(name.trim(), description.trim(), fields);
+      await onSave(name.trim(), description.trim(), fields, discountRate, discountThreshold);
     } finally {
       setSaving(false);
     }
@@ -85,6 +89,56 @@ function TemplateForm({
           {fields.filter(f => f.enabled).length} alan secildi
         </p>
       </div>
+
+      {discountFieldEnabled && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Percent size={15} className="text-amber-600" />
+            <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Indirim Hakki Ayarlari</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1.5">
+                Indirim Orani (%)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={discountRate}
+                  onChange={e => setDiscountRate(Math.min(100, Math.max(0, Number(e.target.value))))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">%</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Indirimli uyelere uygulanacak oran</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1.5">
+                Maksimum Borc Esigi (TL)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  value={discountThreshold}
+                  onChange={e => setDiscountThreshold(Math.max(0, Number(e.target.value)))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">TL</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">Bu tutarin altinda borcu olanlar indirimden yararlanir</p>
+            </div>
+          </div>
+          <div className="bg-amber-100 rounded-lg px-3 py-2">
+            <p className="text-xs text-amber-800">
+              <span className="font-semibold">Ornek:</span> Borc esigi {discountThreshold} TL, oran %{discountRate} ise — {discountThreshold} TL altinda borcu olan uyeler "
+              %{discountRate} indirim hakkiniz var" mesajini alir.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Aciklama</label>
@@ -137,7 +191,7 @@ export function TemplateManager({ templates, onAdd, onUpdate, onDelete }: Props)
 
       {showAdd && !editingId && (
         <TemplateForm
-          onSave={async (name, desc, fields) => { await onAdd(name, desc, fields); setShowAdd(false); }}
+          onSave={async (name, desc, fields, rate, threshold) => { await onAdd(name, desc, fields, rate, threshold); setShowAdd(false); }}
           onCancel={() => setShowAdd(false)}
         />
       )}
@@ -156,7 +210,7 @@ export function TemplateManager({ templates, onAdd, onUpdate, onDelete }: Props)
               <div className="p-4">
                 <TemplateForm
                   initial={t}
-                  onSave={async (name, desc, fields) => { await onUpdate(t.id, name, desc, fields); setEditingId(null); }}
+                  onSave={async (name, desc, fields, rate, threshold) => { await onUpdate(t.id, name, desc, fields, rate, threshold); setEditingId(null); }}
                   onCancel={() => setEditingId(null)}
                 />
               </div>

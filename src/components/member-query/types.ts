@@ -4,6 +4,8 @@ export interface QueryResponseTemplate {
   description: string;
   fields: TemplateField[];
   is_default: boolean;
+  discount_rate: number;
+  discount_threshold: number;
   created_at: string;
   updated_at: string;
 }

@@ -7,11 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Api-Key",
 };
 
-const DISCOUNT_THRESHOLD = 700;
-
-function calculateDiscountRate(totalDebt: number): number {
-  if (totalDebt === 0) return 100;
-  if (totalDebt < DISCOUNT_THRESHOLD) return 50;
+function calculateDiscountRate(totalDebt: number, threshold: number, rate: number): number {
+  if (totalDebt === 0) return rate;
+  if (totalDebt < threshold) return rate;
   return 0;
 }
 
@@ -34,7 +32,9 @@ function getClientIp(req: Request): string {
 
 async function calculateTotalDebt(
   supabase: ReturnType<typeof createClient>,
-  memberId: string
+  memberId: string,
+  discountThreshold: number,
+  discountRate: number
 ): Promise<{ total_debt: number; discount_eligible: boolean; discount_threshold: number; discount_rate: number }> {
   const { data: memberDues } = await supabase
     .from("member_dues")
@@ -43,7 +43,7 @@ async function calculateTotalDebt(
     .in("status", ["pending", "overdue"]);
 
   if (!memberDues || memberDues.length === 0) {
-    return { total_debt: 0, discount_eligible: true, discount_threshold: DISCOUNT_THRESHOLD, discount_rate: 100 };
+    return { total_debt: 0, discount_eligible: true, discount_threshold: discountThreshold, discount_rate: discountRate };
   }
 
   const duesIds = memberDues.map((d: { dues_id: string }) => d.dues_id).filter(Boolean);
@@ -71,9 +71,9 @@ async function calculateTotalDebt(
   const roundedDebt = Math.round(totalDebt * 100) / 100;
   return {
     total_debt: roundedDebt,
-    discount_eligible: roundedDebt < DISCOUNT_THRESHOLD,
-    discount_threshold: DISCOUNT_THRESHOLD,
-    discount_rate: calculateDiscountRate(roundedDebt),
+    discount_eligible: roundedDebt < discountThreshold,
+    discount_threshold: discountThreshold,
+    discount_rate: calculateDiscountRate(roundedDebt, discountThreshold, discountRate),
   };
 }
 
@@ -313,7 +313,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const template = client.query_response_templates as { fields: Array<{ key: string; label: string; enabled: boolean }> } | null;
+    const template = client.query_response_templates as {
+      fields: Array<{ key: string; label: string; enabled: boolean }>;
+      discount_rate?: number;
+      discount_threshold?: number;
+    } | null;
     const templateFields: Array<{ key: string; label: string; enabled: boolean }> =
       template?.fields || [
         { key: "full_name", label: "Ad Soyad", enabled: true },
@@ -321,12 +325,15 @@ Deno.serve(async (req: Request) => {
         { key: "is_active", label: "Aktif Mi", enabled: true },
       ];
 
+    const tmplDiscountRate = template?.discount_rate ?? 50;
+    const tmplDiscountThreshold = template?.discount_threshold ?? 700;
+
     const enabledFields = templateFields.filter(f => f.enabled);
     const returnedFieldKeys = enabledFields.map(f => f.key);
 
     const responseData: Record<string, unknown> = {};
     let found = false;
-    let debtInfo: { total_debt: number; discount_eligible: boolean; discount_threshold: number } | null = null;
+    let debtInfo: { total_debt: number; discount_eligible: boolean; discount_threshold: number; discount_rate: number } | null = null;
 
     if (member) {
       found = true;
@@ -365,19 +372,19 @@ Deno.serve(async (req: Request) => {
           const pending = (dues || []).some((d: { status: string }) => d.status === "pending");
           responseData[field.label] = overdue ? "Borclu" : pending ? "Beklemede" : "Temiz";
         } else if (key === "due_amount") {
-          const dueAmountResult = await calculateTotalDebt(supabase, member.id);
+          const dueAmountResult = await calculateTotalDebt(supabase, member.id, tmplDiscountThreshold, tmplDiscountRate);
           responseData[field.label] = dueAmountResult.total_debt;
           debtInfo = dueAmountResult;
         } else if (key === "discount_eligible") {
           if (!debtInfo) {
-            debtInfo = await calculateTotalDebt(supabase, member.id);
+            debtInfo = await calculateTotalDebt(supabase, member.id, tmplDiscountThreshold, tmplDiscountRate);
           }
           responseData[field.label] = debtInfo.discount_eligible ? `%${debtInfo.discount_rate} indirim hakkiniz var` : "Indirim hakki yok";
         }
       }
 
       if (!debtInfo) {
-        debtInfo = await calculateTotalDebt(supabase, member.id);
+        debtInfo = await calculateTotalDebt(supabase, member.id, tmplDiscountThreshold, tmplDiscountRate);
       }
     }
 

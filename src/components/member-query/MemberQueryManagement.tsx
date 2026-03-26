@@ -76,17 +76,17 @@ export function MemberQueryManagement() {
     if (activeTab === 'logs') loadLogs();
   }, [activeTab, loadLogs]);
 
-  const addTemplate = async (name: string, description: string, fields: TemplateField[]) => {
+  const addTemplate = async (name: string, description: string, fields: TemplateField[], discountRate: number, discountThreshold: number) => {
     const { data: { user } } = await supabase.auth.getUser();
     await supabase.from('query_response_templates').insert({
-      name, description, fields, created_by: user?.id,
+      name, description, fields, discount_rate: discountRate, discount_threshold: discountThreshold, created_by: user?.id,
     });
     await loadData();
   };
 
-  const updateTemplate = async (id: string, name: string, description: string, fields: TemplateField[]) => {
+  const updateTemplate = async (id: string, name: string, description: string, fields: TemplateField[], discountRate: number, discountThreshold: number) => {
     await supabase.from('query_response_templates').update({
-      name, description, fields, updated_at: new Date().toISOString(),
+      name, description, fields, discount_rate: discountRate, discount_threshold: discountThreshold, updated_at: new Date().toISOString(),
     }).eq('id', id);
     await loadData();
   };
