@@ -3,6 +3,12 @@ publish = "dist"
 command = "npm run build"
 
 [[redirects]]
+from = "/api/member-query"
+to = "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query"
+status = 200
+force = true
+
+[[redirects]]
 from = "/*"
 to = "/index.html"
 status = 200
