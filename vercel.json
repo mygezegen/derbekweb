@@ -3,11 +3,23 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/member-query",
-      "destination": "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query"
+      "src": "/api/member-query",
+      "dest": "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "src": "^/(assets|icons|images)/(.*)",
+      "dest": "/$1/$2"
+    },
+    {
+      "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|webmanifest))$",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }

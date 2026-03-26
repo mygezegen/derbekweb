@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ArrowLeft, CheckCircle, XCircle, AlertCircle, Loader2, User, Shield, CreditCard } from 'lucide-react';
+import { Search, ArrowLeft, CheckCircle, XCircle, AlertCircle, Loader2, User, Shield, CreditCard, Tag, TrendingDown } from 'lucide-react';
 
 type QueryStatus = 'idle' | 'loading' | 'found' | 'not_found' | 'error';
 
 interface MemberData {
   [key: string]: string | boolean | null;
+}
+
+interface DebtInfo {
+  total_debt: number;
+  discount_eligible: boolean;
+  discount_threshold: number;
 }
 
 export function MemberQueryPage() {
@@ -14,6 +20,7 @@ export function MemberQueryPage() {
   const [name, setName] = useState('');
   const [status, setStatus] = useState<QueryStatus>('idle');
   const [memberData, setMemberData] = useState<MemberData | null>(null);
+  const [debtInfo, setDebtInfo] = useState<DebtInfo | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleQuery = async (e: React.FormEvent) => {
@@ -28,6 +35,7 @@ export function MemberQueryPage() {
 
     setStatus('loading');
     setMemberData(null);
+    setDebtInfo(null);
     setErrorMsg('');
 
     try {
@@ -64,6 +72,7 @@ export function MemberQueryPage() {
           }
         }
         setMemberData(data.data);
+        setDebtInfo(data.debt_info || null);
         setStatus('found');
       } else {
         setStatus('not_found');
@@ -77,6 +86,7 @@ export function MemberQueryPage() {
   const handleReset = () => {
     setStatus('idle');
     setMemberData(null);
+    setDebtInfo(null);
     setErrorMsg('');
     setTc('');
     setName('');
@@ -205,37 +215,86 @@ export function MemberQueryPage() {
               </button>
             </form>
           ) : status === 'found' && memberData ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                    <CheckCircle size={20} className="text-white" />
+            <div className="space-y-3">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-6 py-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                      <CheckCircle size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-base">Uye Bulundu</p>
+                      <p className="text-green-100 text-xs">Kayitli uye bilgileri asagidadir</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white font-bold text-base">Uye Bulundu</p>
-                    <p className="text-green-100 text-xs">Kayitli uye bilgileri asagidadir</p>
-                  </div>
+                </div>
+
+                <div className="p-6 space-y-3">
+                  {Object.entries(memberData).map(([key, val]) => (
+                    <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{key}</span>
+                      <div className="text-sm text-right">{renderValue(key, val as string | boolean | null)}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="p-6 space-y-3">
-                {Object.entries(memberData).map(([key, val]) => (
-                  <div key={key} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{key}</span>
-                    <div className="text-sm text-right">{renderValue(key, val as string | boolean | null)}</div>
+              {debtInfo && (
+                <div className={`rounded-2xl border overflow-hidden shadow-sm ${
+                  debtInfo.discount_eligible
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-red-200 bg-red-50'
+                }`}>
+                  <div className={`px-5 py-4 flex items-start gap-3 ${
+                    debtInfo.discount_eligible ? 'bg-emerald-100/60' : 'bg-red-100/60'
+                  }`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      debtInfo.discount_eligible ? 'bg-emerald-500' : 'bg-red-500'
+                    }`}>
+                      {debtInfo.discount_eligible
+                        ? <Tag size={16} className="text-white" />
+                        : <TrendingDown size={16} className="text-white" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-bold ${debtInfo.discount_eligible ? 'text-emerald-800' : 'text-red-800'}`}>
+                        {debtInfo.discount_eligible
+                          ? 'Indirimden Yararlanabilirsiniz'
+                          : 'Borc Limiti Asildi'
+                        }
+                      </p>
+                      <p className={`text-xs mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-700'}`}>
+                        {debtInfo.total_debt === 0
+                          ? 'Borcunuz bulunmamaktadir, indirimlerden tam olarak yararlanabilirsiniz.'
+                          : debtInfo.discount_eligible
+                            ? `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitinin altindadir.`
+                            : `Toplam borcunuz ${debtInfo.total_debt.toLocaleString('tr-TR')} TL olup ${debtInfo.discount_threshold} TL limitini astigindan indirimden yararlanamaz.`
+                        }
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="px-6 pb-6">
-                <button
-                  onClick={handleReset}
-                  className="w-full flex items-center justify-center gap-2 border border-slate-300 text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm"
-                >
-                  <Search size={14} />
-                  Yeni Sorgulama
-                </button>
-              </div>
+                  <div className="px-5 py-3 flex items-center justify-between">
+                    <span className={`text-xs font-semibold uppercase tracking-wide ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
+                      Toplam Borc
+                    </span>
+                    <span className={`text-lg font-bold ${debtInfo.discount_eligible ? 'text-emerald-700' : 'text-red-700'}`}>
+                      {debtInfo.total_debt === 0
+                        ? 'Borcsuz'
+                        : `${debtInfo.total_debt.toLocaleString('tr-TR', { minimumFractionDigits: 2 })} TL`
+                      }
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleReset}
+                className="w-full flex items-center justify-center gap-2 border border-slate-300 bg-white text-slate-600 font-medium py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-sm"
+              >
+                <Search size={14} />
+                Yeni Sorgulama
+              </button>
             </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">

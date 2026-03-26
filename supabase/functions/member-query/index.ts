@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, X-Api-Key",
 };
 
+const DISCOUNT_THRESHOLD = 700;
+
 async function sha256(text: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(text);
@@ -22,6 +24,65 @@ function getClientIp(req: Request): string {
     req.headers.get("cf-connecting-ip") ||
     "unknown"
   );
+}
+
+async function calculateTotalDebt(
+  supabase: ReturnType<typeof createClient>,
+  memberId: string
+): Promise<{ total_debt: number; discount_eligible: boolean; discount_threshold: number }> {
+  const { data: memberDues } = await supabase
+    .from("member_dues")
+    .select("status, paid_amount, dues_id")
+    .eq("member_id", memberId)
+    .in("status", ["pending", "overdue"]);
+
+  if (!memberDues || memberDues.length === 0) {
+    return { total_debt: 0, discount_eligible: true, discount_threshold: DISCOUNT_THRESHOLD };
+  }
+
+  const duesIds = memberDues.map((d: { dues_id: string }) => d.dues_id).filter(Boolean);
+  let totalDebt = 0;
+
+  if (duesIds.length > 0) {
+    const { data: duesDetails } = await supabase
+      .from("dues")
+      .select("id, amount")
+      .in("id", duesIds);
+
+    const duesMap: Record<string, number> = {};
+    for (const d of (duesDetails || [])) {
+      duesMap[d.id] = Number(d.amount) || 0;
+    }
+
+    for (const md of memberDues) {
+      const dueAmount = duesMap[md.dues_id] || 0;
+      const paid = Number(md.paid_amount) || 0;
+      const remaining = dueAmount - paid;
+      if (remaining > 0) totalDebt += remaining;
+    }
+  }
+
+  return {
+    total_debt: Math.round(totalDebt * 100) / 100,
+    discount_eligible: totalDebt < DISCOUNT_THRESHOLD,
+    discount_threshold: DISCOUNT_THRESHOLD,
+  };
+}
+
+function ipInCidr(ip: string, cidr: string): boolean {
+  try {
+    const [range, bits] = cidr.split("/");
+    const mask = ~(2 ** (32 - parseInt(bits)) - 1);
+    const ipNum = ipToNum(ip);
+    const rangeNum = ipToNum(range);
+    return (ipNum & mask) === (rangeNum & mask);
+  } catch {
+    return false;
+  }
+}
+
+function ipToNum(ip: string): number {
+  return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet), 0);
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,7 +106,6 @@ Deno.serve(async (req: Request) => {
 
     let client: Record<string, unknown> | null = null;
 
-    // 1. API KEY ile istemci bul (key varsa)
     if (apiKey && apiKey.trim() !== "") {
       const keyHash = await sha256(apiKey.trim());
       const { data, error } = await supabase
@@ -68,7 +128,6 @@ Deno.serve(async (req: Request) => {
       }
       client = data;
     } else {
-      // API key yok - require_api_key=false olan ve allowed_ips listesinde bu IP olan istemciyi ara
       const { data: candidates } = await supabase
         .from("api_clients")
         .select("*, query_response_templates(*)")
@@ -79,7 +138,6 @@ Deno.serve(async (req: Request) => {
         for (const c of candidates) {
           const ips: string[] = c.allowed_ips || [];
           if (ips.length === 0) {
-            // Herkese acik istemci
             client = c;
             break;
           }
@@ -109,7 +167,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // İstemci aktif mi?
     if (!client.is_active) {
       await supabase.from("query_logs").insert({
         client_id: client.id,
@@ -125,7 +182,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. IP kontrolü (API key ile erişimde de izin listesi varsa kontrol et)
     const allowedIps: string[] = (client.allowed_ips as string[]) || [];
     if (allowedIps.length > 0) {
       const ipAllowed = allowedIps.some((allowedIp: string) => {
@@ -150,7 +206,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 3. Rate limit kontrolü
     const windowStart = new Date(
       Date.now() - (client.rate_limit_window_minutes as number) * 60 * 1000
     ).toISOString();
@@ -181,7 +236,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 4. Parametre doğrulama
     let tc: string | null = null;
 
     if (req.method === "POST") {
@@ -189,7 +243,7 @@ Deno.serve(async (req: Request) => {
         const body = await req.json();
         tc = body.tc || body.tc_no || body.kimlik_no || null;
       } catch {
-        // ignore parse error
+        // ignore
       }
     } else {
       tc = params.get("tc") || params.get("tc_no") || params.get("kimlik_no");
@@ -228,14 +282,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 5. Üye sorgulama
     const { data: member } = await supabase
       .from("members")
       .select("id, full_name, email, phone, address, is_active, is_admin, occupation, neighborhood, city, created_at, membership_start_date, tc_identity_no")
       .eq("tc_identity_no", tcClean)
       .maybeSingle();
 
-    // 6. Template'e göre response üret
     const template = client.query_response_templates as { fields: Array<{ key: string; label: string; enabled: boolean }> } | null;
     const templateFields: Array<{ key: string; label: string; enabled: boolean }> =
       template?.fields || [
@@ -249,6 +301,7 @@ Deno.serve(async (req: Request) => {
 
     const responseData: Record<string, unknown> = {};
     let found = false;
+    let debtInfo: { total_debt: number; discount_eligible: boolean; discount_threshold: number } | null = null;
 
     if (member) {
       found = true;
@@ -286,11 +339,18 @@ Deno.serve(async (req: Request) => {
           const overdue = (dues || []).some((d: { status: string }) => d.status === "overdue");
           const pending = (dues || []).some((d: { status: string }) => d.status === "pending");
           responseData[field.label] = overdue ? "Borclu" : pending ? "Beklemede" : "Temiz";
+        } else if (key === "due_amount") {
+          const dueAmountResult = await calculateTotalDebt(supabase, member.id);
+          responseData[field.label] = dueAmountResult.total_debt;
+          debtInfo = dueAmountResult;
         }
+      }
+
+      if (!debtInfo) {
+        debtInfo = await calculateTotalDebt(supabase, member.id);
       }
     }
 
-    // 7. Log kaydı
     await supabase.from("query_logs").insert({
       client_id: client.id,
       client_name: client.name,
@@ -318,6 +378,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         found: true,
         data: responseData,
+        debt_info: debtInfo,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -337,19 +398,3 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-
-function ipInCidr(ip: string, cidr: string): boolean {
-  try {
-    const [range, bits] = cidr.split("/");
-    const mask = ~(2 ** (32 - parseInt(bits)) - 1);
-    const ipNum = ipToNum(ip);
-    const rangeNum = ipToNum(range);
-    return (ipNum & mask) === (rangeNum & mask);
-  } catch {
-    return false;
-  }
-}
-
-function ipToNum(ip: string): number {
-  return ip.split(".").reduce((acc, octet) => (acc << 8) + parseInt(octet), 0);
-}
