@@ -36,7 +36,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -46,13 +51,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       (async () => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
+        if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          setSession(session);
+          setUser(session?.user ?? null);
+          if (session?.user) {
+            await loadMember(session.user.id);
+          }
+        } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+          setSession(null);
+          setUser(null);
+          setMember(null);
+        } else if (session) {
+          setSession(session);
+          setUser(session.user);
           await loadMember(session.user.id);
         } else {
+          setSession(null);
+          setUser(null);
           setMember(null);
         }
       })();
@@ -72,7 +89,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch {
+      setSession(null);
+      setUser(null);
+      setMember(null);
+    }
   };
 
   return (

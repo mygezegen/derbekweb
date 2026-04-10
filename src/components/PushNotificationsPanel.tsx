@@ -146,7 +146,10 @@ export function PushNotificationsPanel() {
 
       const result = await res.json();
 
-      if (!res.ok) throw new Error(result.error || 'Gonderim basarisiz oldu');
+      if (!res.ok) {
+        const errDetail = result.error || result.message || JSON.stringify(result);
+        throw new Error(`Gonderim basarisiz (HTTP ${res.status}): ${errDetail}`);
+      }
 
       setSuccess(`Bildirim gonderildi. Basarili: ${result.sent}, Basarisiz: ${result.failed}`);
       setTitle('');
