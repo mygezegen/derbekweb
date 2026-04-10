@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
@@ -6,9 +6,23 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import MainNavigator from './src/navigation/MainNavigator';
+import { registerForPushNotifications, registerNotificationListeners } from './src/lib/pushNotifications';
 
 function RootNavigator() {
-  const { loading } = useAuth();
+  const { loading, member } = useAuth();
+
+  useEffect(() => {
+    if (!member?.id) return;
+
+    registerForPushNotifications(member.id).catch(console.error);
+
+    const cleanup = registerNotificationListeners(
+      (_notification) => {},
+      (_response) => {}
+    );
+
+    return cleanup;
+  }, [member?.id]);
 
   if (loading) {
     return (

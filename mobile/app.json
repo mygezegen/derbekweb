@@ -27,9 +27,16 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "newArchEnabled": false,
     "plugins": [
-      "expo-secure-store"
-    ],
-    "newArchEnabled": false
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#b91c1c",
+          "sounds": []
+        }
+      ]
+    ]
   }
 }

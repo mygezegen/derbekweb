@@ -72,6 +72,23 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const GuestTab = createBottomTabNavigator<GuestTabParamList>();
 const MemberTab = createBottomTabNavigator<MemberTabParamList>();
 
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: '#fff',
+    borderTopColor: '#f3f4f6',
+    borderTopWidth: 1,
+    height: 60,
+    paddingBottom: 8,
+    paddingTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tabLabel: { fontSize: 11, fontWeight: '600' },
+});
+
 const stackHeaderOptions = {
   headerStyle: { backgroundColor: '#b91c1c' },
   headerTintColor: '#fff',
@@ -207,20 +224,3 @@ export default function MainNavigator() {
   const { user } = useAuth();
   return user ? <MemberNavigator /> : <GuestNavigator />;
 }
-
-const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#fff',
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
-    paddingTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  tabLabel: { fontSize: 11, fontWeight: '600' },
-});

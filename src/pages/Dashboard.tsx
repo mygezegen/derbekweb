@@ -18,6 +18,7 @@ import { BoardManagement } from '../components/BoardManagement';
 import { EmailTemplates } from '../components/EmailTemplates';
 import { TreasuryManagement } from '../components/TreasuryManagement';
 import { NotificationsPanel } from '../components/NotificationsPanel';
+import { PushNotificationsPanel } from '../components/PushNotificationsPanel';
 import { SMSConfiguration } from '../components/SMSConfiguration';
 import { DutyPharmacy } from '../components/DutyPharmacy';
 import EmailVerificationCheck from '../components/EmailVerificationCheck';
@@ -35,7 +36,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory' | 'social-monitor' | 'member-query' | 'seo'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'push-notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory' | 'social-monitor' | 'member-query' | 'seo'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -522,6 +523,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'notifications' && currentMember?.is_admin && (
           <NotificationsPanel />
+        )}
+
+        {activeTab === 'push-notifications' && currentMember?.is_admin && (
+          <PushNotificationsPanel />
         )}
 
         {activeTab === 'qr-scanner' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
