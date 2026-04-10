@@ -24,16 +24,16 @@ type DuesWithDues = MemberDues & {
 };
 
 const STATUS_CONFIG = {
-  paid: { label: 'Ödendi', color: '#10b981', bg: '#d1fae5', icon: 'checkmark-circle' as const },
-  pending: { label: 'Bekliyor', color: '#f59e0b', bg: '#fef3c7', icon: 'time' as const },
-  overdue: { label: 'Gecikmiş', color: '#ef4444', bg: '#fee2e2', icon: 'alert-circle' as const },
+  paid: { label: 'Ödendi', color: '#16a34a', bg: '#dcfce7', icon: 'checkmark-circle' as const },
+  pending: { label: 'Bekliyor', color: '#d97706', bg: '#fef3c7', icon: 'time' as const },
+  overdue: { label: 'Gecikmiş', color: '#dc2626', bg: '#fee2e2', icon: 'alert-circle' as const },
   cancelled: { label: 'İptal', color: '#9ca3af', bg: '#f3f4f6', icon: 'close-circle' as const },
 };
 
 const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 
 export default function DuesScreen() {
-  const { member } = useAuth();
+  const { member, user } = useAuth();
   const [dues, setDues] = useState<DuesWithDues[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,6 +64,16 @@ export default function DuesScreen() {
 
   useEffect(() => { loadDues(); }, [loadDues]);
 
+  if (!user) {
+    return (
+      <View style={styles.center}>
+        <Ionicons name="lock-closed-outline" size={48} color="#d1d5db" />
+        <Text style={styles.guestTitle}>Giriş Yapmanız Gerekiyor</Text>
+        <Text style={styles.guestText}>Aidat bilgilerinizi görmek için lütfen giriş yapın.</Text>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -82,10 +92,10 @@ export default function DuesScreen() {
       ListHeaderComponent={
         <>
           <View style={styles.summaryGrid}>
-            <SummaryCard label="Toplam" amount={summary.total} color="#3b82f6" icon="wallet" />
-            <SummaryCard label="Ödendi" amount={summary.paid} color="#10b981" icon="checkmark-circle" />
-            <SummaryCard label="Bekliyor" amount={summary.pending} color="#f59e0b" icon="time" />
-            <SummaryCard label="Gecikmiş" amount={summary.overdue} color="#ef4444" icon="alert-circle" />
+            <SummaryCard label="Toplam" amount={summary.total} color="#b91c1c" icon="wallet" />
+            <SummaryCard label="Ödendi" amount={summary.paid} color="#16a34a" icon="checkmark-circle" />
+            <SummaryCard label="Bekliyor" amount={summary.pending} color="#d97706" icon="time" />
+            <SummaryCard label="Gecikmiş" amount={summary.overdue} color="#dc2626" icon="alert-circle" />
           </View>
           <Text style={styles.listTitle}>Aidat Detayları</Text>
         </>
@@ -121,8 +131,8 @@ export default function DuesScreen() {
               )}
               {item.paid_at && (
                 <View style={styles.metaItem}>
-                  <Ionicons name="checkmark-circle-outline" size={12} color="#10b981" />
-                  <Text style={[styles.metaText, { color: '#10b981' }]}>Ödendi: {new Date(item.paid_at).toLocaleDateString('tr-TR')}</Text>
+                  <Ionicons name="checkmark-circle-outline" size={12} color="#16a34a" />
+                  <Text style={[styles.metaText, { color: '#16a34a' }]}>Ödendi: {new Date(item.paid_at).toLocaleDateString('tr-TR')}</Text>
                 </View>
               )}
               {item.payment_method && (
@@ -171,8 +181,10 @@ const summaryStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 32 },
+  guestTitle: { fontSize: 18, fontWeight: '700', color: '#111827', textAlign: 'center' },
+  guestText: { fontSize: 14, color: '#6b7280', textAlign: 'center', lineHeight: 22 },
   list: { padding: 16, paddingBottom: 40 },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   listTitle: { fontSize: 17, fontWeight: '700', color: '#111827', marginBottom: 12 },

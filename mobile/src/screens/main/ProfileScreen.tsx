@@ -90,11 +90,11 @@ export default function ProfileScreen() {
         />
         <View style={[styles.infoRow, { alignItems: 'center' }]}>
           <View style={styles.infoIconBg}>
-            <Ionicons name="checkmark-circle" size={16} color={member.is_active ? '#10b981' : '#ef4444'} />
+            <Ionicons name="checkmark-circle" size={16} color={member.is_active ? '#16a34a' : '#dc2626'} />
           </View>
           <View>
             <Text style={styles.infoLabel}>Durum</Text>
-            <Text style={[styles.infoValue, { color: member.is_active ? '#10b981' : '#ef4444' }]}>
+            <Text style={[styles.infoValue, { color: member.is_active ? '#16a34a' : '#dc2626' }]}>
               {member.is_active ? 'Aktif' : 'Pasif'}
             </Text>
           </View>
@@ -161,7 +161,7 @@ export default function ProfileScreen() {
       </View>
 
       <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
-        <Ionicons name="log-out-outline" size={20} color="#ef4444" />
+        <Ionicons name="log-out-outline" size={20} color="#dc2626" />
         <Text style={styles.logoutText}>Çıkış Yap</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -183,7 +183,7 @@ function InfoRow({ icon, label, value }: { icon: any; label: string; value: stri
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   content: { paddingBottom: 40 },
   headerBg: {
     alignItems: 'center',
@@ -293,5 +293,5 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  logoutText: { fontSize: 15, fontWeight: '700', color: '#ef4444' },
+  logoutText: { fontSize: 15, fontWeight: '700', color: '#dc2626' },
 });

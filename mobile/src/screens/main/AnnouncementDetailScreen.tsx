@@ -56,7 +56,7 @@ export default function AnnouncementDetailScreen({ route }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.headerIcon}>
-          <Ionicons name="megaphone" size={24} color="#3b82f6" />
+          <Ionicons name="megaphone" size={24} color="#b91c1c" />
         </View>
         <Text style={styles.title}>{announcement.title}</Text>
       </View>
@@ -91,7 +91,7 @@ export default function AnnouncementDetailScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   content: { padding: 20, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   notFound: { fontSize: 16, color: '#9ca3af' },
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#fef2f2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,

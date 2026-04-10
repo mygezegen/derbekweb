@@ -27,7 +27,7 @@ type Stats = {
 };
 
 export default function HomeScreen({ navigation }: Props) {
-  const { member, signOut } = useAuth();
+  const { member, user, signOut } = useAuth();
   const [stats, setStats] = useState<Stats>({ totalAnnouncements: 0, upcomingEvents: 0, myPendingDues: 0, totalMembers: 0 });
   const [recentAnnouncements, setRecentAnnouncements] = useState<Announcement[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
@@ -100,25 +100,37 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={styles.headerContent}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.greeting}>Merhaba,</Text>
-              <Text style={styles.memberName}>{member?.full_name || 'Üye'}</Text>
+              <Text style={styles.greeting}>{user ? 'Merhaba,' : 'Hoş Geldiniz'}</Text>
+              {user && <Text style={styles.memberName}>{member?.full_name || 'Üye'}</Text>}
             </View>
-            <TouchableOpacity onPress={signOut} style={styles.logoutBtn}>
-              <Ionicons name="log-out-outline" size={22} color="rgba(255,255,255,0.8)" />
-            </TouchableOpacity>
+            {user ? (
+              <TouchableOpacity onPress={signOut} style={styles.logoutBtn}>
+                <Ionicons name="log-out-outline" size={22} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => navigation.navigate('AuthTab')} style={styles.loginBtn}>
+                <Ionicons name="log-in-outline" size={18} color="#b91c1c" />
+                <Text style={styles.loginBtnText}>Giriş Yap</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <View style={styles.badge}>
-            <Ionicons name={member?.is_admin ? 'shield-checkmark' : 'person'} size={12} color="#fff" />
-            <Text style={styles.badgeText}>{member?.is_root ? 'Root Yönetici' : member?.is_admin ? 'Yönetici' : 'Üye'}</Text>
-          </View>
+          {user && (
+            <View style={styles.badge}>
+              <Ionicons name={member?.is_admin ? 'shield-checkmark' : 'person'} size={12} color="#fff" />
+              <Text style={styles.badgeText}>{member?.is_root ? 'Root Yönetici' : member?.is_admin ? 'Yönetici' : 'Üye'}</Text>
+            </View>
+          )}
+          {!user && (
+            <Text style={styles.guestSubtitle}>Çüngüş Çaybaşı Köyü Derneği</Text>
+          )}
         </View>
       </LinearGradient>
 
       <View style={styles.statsGrid}>
-        <StatCard icon="megaphone" label="Duyurular" value={stats.totalAnnouncements} color="#3b82f6" />
-        <StatCard icon="calendar" label="Yaklaşan Etkinlik" value={stats.upcomingEvents} color="#10b981" />
-        <StatCard icon="wallet" label="Bekleyen Aidat" value={stats.myPendingDues} color="#f59e0b" />
-        <StatCard icon="people" label="Toplam Üye" value={stats.totalMembers} color="#8b5cf6" />
+        <StatCard icon="megaphone" label="Duyurular" value={stats.totalAnnouncements} color="#b91c1c" />
+        <StatCard icon="calendar" label="Yaklaşan Etkinlik" value={stats.upcomingEvents} color="#16a34a" />
+        {user && <StatCard icon="wallet" label="Bekleyen Aidat" value={stats.myPendingDues} color="#d97706" />}
+        <StatCard icon="people" label="Toplam Üye" value={stats.totalMembers} color="#0369a1" />
       </View>
 
       <View style={styles.section}>
@@ -138,7 +150,7 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('AnnouncementsTab', { screen: 'AnnouncementDetail', params: { id: a.id } })}
               activeOpacity={0.7}
             >
-              <View style={[styles.cardAccent, { backgroundColor: '#3b82f6' }]} />
+              <View style={[styles.cardAccent, { backgroundColor: '#b91c1c' }]} />
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle} numberOfLines={2}>{a.title}</Text>
                 <Text style={styles.cardDate}>{formatDate(a.created_at)}</Text>
@@ -166,7 +178,7 @@ export default function HomeScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('EventsTab', { screen: 'EventDetail', params: { id: e.id } })}
               activeOpacity={0.7}
             >
-              <View style={[styles.cardAccent, { backgroundColor: '#10b981' }]} />
+              <View style={[styles.cardAccent, { backgroundColor: '#16a34a' }]} />
               <View style={styles.cardContent}>
                 <Text style={styles.cardTitle} numberOfLines={1}>{e.title}</Text>
                 <View style={styles.cardMeta}>
@@ -192,10 +204,14 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
         </View>
         <View style={styles.quickGrid}>
-          <QuickBtn icon="images" label="Galeri" color="#f97316" onPress={() => navigation.navigate('GalleryList')} />
-          <QuickBtn icon="wallet" label="Aidatlarım" color="#f59e0b" onPress={() => navigation.navigate('DuesTab')} />
-          <QuickBtn icon="person" label="Profilim" color="#3b82f6" onPress={() => navigation.navigate('ProfileTab')} />
-          <QuickBtn icon="calendar" label="Etkinlikler" color="#10b981" onPress={() => navigation.navigate('EventsTab')} />
+          <QuickBtn icon="images" label="Galeri" color="#b91c1c" onPress={() => navigation.navigate('GalleryList')} />
+          <QuickBtn icon="calendar" label="Etkinlikler" color="#16a34a" onPress={() => navigation.navigate('EventsTab')} />
+          <QuickBtn icon="people" label="Üyeler" color="#0369a1" onPress={() => navigation.navigate('MembersTab')} />
+          {user ? (
+            <QuickBtn icon="wallet" label="Aidatlarım" color="#d97706" onPress={() => navigation.navigate('DuesTab')} />
+          ) : (
+            <QuickBtn icon="log-in" label="Giriş Yap" color="#d97706" onPress={() => navigation.navigate('AuthTab')} />
+          )}
         </View>
       </View>
     </ScrollView>
@@ -234,7 +250,7 @@ function EmptyCard({ text }: { text: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { paddingTop: 60, paddingBottom: 28, paddingHorizontal: 24 },
   headerContent: {},
@@ -242,6 +258,17 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 15, color: 'rgba(255,255,255,0.8)', fontWeight: '400' },
   memberName: { fontSize: 24, color: '#fff', fontWeight: '800', marginTop: 2 },
   logoutBtn: { padding: 8, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.1)' },
+  loginBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  loginBtnText: { fontSize: 13, fontWeight: '700', color: '#b91c1c' },
+  guestSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8, fontWeight: '500' },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

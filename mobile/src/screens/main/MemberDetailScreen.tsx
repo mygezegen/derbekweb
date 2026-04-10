@@ -29,7 +29,7 @@ type DebtItem = MemberDues & {
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  paid: { label: 'Ödendi', color: '#059669', bg: '#d1fae5', icon: 'checkmark-circle' },
+  paid: { label: 'Ödendi', color: '#16a34a', bg: '#dcfce7', icon: 'checkmark-circle' },
   pending: { label: 'Bekliyor', color: '#d97706', bg: '#fef3c7', icon: 'time' },
   overdue: { label: 'Gecikmiş', color: '#dc2626', bg: '#fee2e2', icon: 'alert-circle' },
   cancelled: { label: 'İptal', color: '#6b7280', bg: '#f3f4f6', icon: 'close-circle' },
@@ -117,7 +117,7 @@ export default function MemberDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const roleColor = member.is_root ? '#b91c1c' : member.is_admin ? '#f59e0b' : '#10b981';
+  const roleColor = member.is_root ? '#b91c1c' : member.is_admin ? '#d97706' : '#16a34a';
   const roleLabel = member.is_root ? 'Root' : member.is_admin ? 'Yönetici' : 'Üye';
 
   return (
@@ -189,7 +189,7 @@ export default function MemberDetailScreen({ route, navigation }: Props) {
           <View style={styles.debtSummary}>
             <DebtSummaryCard label="Toplam Gecikmiş" value={overdueCount} color="#dc2626" />
             <DebtSummaryCard label="Bekleyen" value={pendingCount} color="#d97706" />
-            <DebtSummaryCard label="Ödenen" value={paidCount} color="#059669" />
+            <DebtSummaryCard label="Ödenen" value={paidCount} color="#16a34a" />
           </View>
 
           {totalDebt > 0 && (
@@ -235,7 +235,7 @@ export default function MemberDetailScreen({ route, navigation }: Props) {
                         {debt.paid_amount > 0 && (
                           <View style={styles.debtAmountItem}>
                             <Text style={styles.debtAmountLabel}>Ödenen</Text>
-                            <Text style={[styles.debtAmountValue, { color: '#059669' }]}>{debt.paid_amount.toLocaleString('tr-TR')} ₺</Text>
+                            <Text style={[styles.debtAmountValue, { color: '#16a34a' }]}>{debt.paid_amount.toLocaleString('tr-TR')} ₺</Text>
                           </View>
                         )}
                         {(debt.status === 'pending' || debt.status === 'overdue') && remaining > 0 && (
@@ -253,8 +253,8 @@ export default function MemberDetailScreen({ route, navigation }: Props) {
                       )}
                       {debt.paid_at && (
                         <View style={styles.dueDateRow}>
-                          <Ionicons name="checkmark-outline" size={12} color="#059669" />
-                          <Text style={[styles.dueDate, { color: '#059669' }]}>Ödeme tarihi: {formatDate(debt.paid_at)}</Text>
+                          <Ionicons name="checkmark-outline" size={12} color="#16a34a" />
+                          <Text style={[styles.dueDate, { color: '#16a34a' }]}>Ödeme tarihi: {formatDate(debt.paid_at)}</Text>
                         </View>
                       )}
                       {debt.notes ? (
@@ -304,7 +304,7 @@ function DebtSummaryCard({ label, value, color }: { label: string; value: number
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   profileCard: {
     backgroundColor: '#fff',

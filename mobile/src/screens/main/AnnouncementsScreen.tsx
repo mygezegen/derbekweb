@@ -97,7 +97,7 @@ export default function AnnouncementsScreen({ navigation }: Props) {
           >
             <View style={styles.cardTop}>
               <View style={styles.iconBg}>
-                <Ionicons name="megaphone" size={18} color="#3b82f6" />
+                <Ionicons name="megaphone" size={18} color="#b91c1c" />
               </View>
               <View style={styles.cardMeta}>
                 <Text style={styles.cardDate}>{formatDate(item.created_at)}</Text>
@@ -127,7 +127,7 @@ export default function AnnouncementsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   searchContainer: {
     flexDirection: 'row',
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#fef2f2',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
@@ -173,12 +173,12 @@ const styles = StyleSheet.create({
   cardDate: { fontSize: 12, color: '#6b7280' },
   cardAuthor: { fontSize: 12, color: '#374151', fontWeight: '500', marginTop: 1 },
   activeBadge: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 20,
   },
-  activeBadgeText: { fontSize: 11, color: '#065f46', fontWeight: '600' },
+  activeBadgeText: { fontSize: 11, color: '#15803d', fontWeight: '600' },
   cardTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 6, lineHeight: 22 },
   cardPreview: { fontSize: 14, color: '#6b7280', lineHeight: 20, marginBottom: 12 },
   cardFooter: { flexDirection: 'row', alignItems: 'center', gap: 4 },

@@ -5,11 +5,10 @@ import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import AuthNavigator from './src/navigation/AuthNavigator';
 import MainNavigator from './src/navigation/MainNavigator';
 
 function RootNavigator() {
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -19,7 +18,7 @@ function RootNavigator() {
     );
   }
 
-  return user ? <MainNavigator /> : <AuthNavigator />;
+  return <MainNavigator />;
 }
 
 export default function App() {
@@ -39,5 +38,5 @@ export default function App() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
 });

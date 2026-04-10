@@ -71,8 +71,8 @@ export default function MembersScreen({ navigation }: Props) {
   const getStatusColor = (m: Member) => {
     if (!m.is_active) return '#9ca3af';
     if (m.is_root) return '#b91c1c';
-    if (m.is_admin) return '#f59e0b';
-    return '#10b981';
+    if (m.is_admin) return '#d97706';
+    return '#16a34a';
   };
 
   const getStatusLabel = (m: Member) => {
@@ -169,7 +169,7 @@ export default function MembersScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   searchBox: {
     flexDirection: 'row',

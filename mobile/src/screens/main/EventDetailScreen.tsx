@@ -96,7 +96,7 @@ export default function EventDetailScreen({ route }: Props) {
         <Text style={styles.title}>{event.title}</Text>
         {isUpcoming && (
           <View style={styles.upcomingBadge}>
-            <Ionicons name="time" size={12} color="#065f46" />
+            <Ionicons name="time" size={12} color="#15803d" />
             <Text style={styles.upcomingText}>Yaklaşan Etkinlik</Text>
           </View>
         )}
@@ -135,7 +135,7 @@ export default function EventDetailScreen({ route }: Props) {
 
       {myParticipation && (
         <View style={styles.myStatusCard}>
-          <Ionicons name="checkmark-circle" size={18} color="#10b981" />
+          <Ionicons name="checkmark-circle" size={18} color="#16a34a" />
           <Text style={styles.myStatusText}>Bu etkinliğe katılacaksınız</Text>
         </View>
       )}
@@ -172,7 +172,7 @@ const infoStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   content: { padding: 20, paddingBottom: 40 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   notFound: { fontSize: 16, color: '#9ca3af' },
@@ -191,13 +191,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
     marginTop: 10,
   },
-  upcomingText: { fontSize: 12, color: '#065f46', fontWeight: '600' },
+  upcomingText: { fontSize: 12, color: '#15803d', fontWeight: '600' },
   infoCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -235,17 +235,17 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  attendBtn: { backgroundColor: '#10b981', shadowColor: '#10b981' },
-  leaveBtn: { backgroundColor: '#ef4444', shadowColor: '#ef4444' },
+  attendBtn: { backgroundColor: '#16a34a', shadowColor: '#16a34a' },
+  leaveBtn: { backgroundColor: '#dc2626', shadowColor: '#dc2626' },
   btnDisabled: { opacity: 0.6 },
   joinBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   myStatusCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#dcfce7',
     borderRadius: 12,
     padding: 12,
   },
-  myStatusText: { fontSize: 14, color: '#065f46', fontWeight: '600' },
+  myStatusText: { fontSize: 14, color: '#15803d', fontWeight: '600' },
 });

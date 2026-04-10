@@ -138,7 +138,7 @@ export default function GalleryDetailScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f9fafb' },
   grid: { paddingBottom: 16 },
   gridItem: {
     width: ITEM_SIZE,
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   captionText: { fontSize: 10, color: '#fff' },
-  empty: { alignItems: 'center', paddingTop: 80, gap: 12, backgroundColor: '#f8fafc', flex: 1 },
+  empty: { alignItems: 'center', paddingTop: 80, gap: 12, backgroundColor: '#f9fafb', flex: 1 },
   emptyText: { fontSize: 15, color: '#9ca3af' },
   lightbox: {
     flex: 1,

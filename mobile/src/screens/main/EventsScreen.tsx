@@ -140,7 +140,7 @@ export default function EventsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   filterRow: {
     flexDirection: 'row',
@@ -192,12 +192,12 @@ const styles = StyleSheet.create({
   cardTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: '#111827', lineHeight: 20 },
   upcomingBadge: {
-    backgroundColor: '#d1fae5',
+    backgroundColor: '#dcfce7',
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
-  upcomingBadgeText: { fontSize: 10, fontWeight: '700', color: '#065f46' },
+  upcomingBadgeText: { fontSize: 10, fontWeight: '700', color: '#15803d' },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
   infoText: { fontSize: 12, color: '#6b7280' },
   empty: { alignItems: 'center', paddingTop: 80, gap: 12 },

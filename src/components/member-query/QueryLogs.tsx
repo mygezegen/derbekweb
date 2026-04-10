@@ -18,13 +18,14 @@ interface MemberDetail {
   email: string | null;
   phone: string | null;
   tc_identity_no: string | null;
-  membership_status: string | null;
   is_active: boolean;
-  member_since: string | null;
-  occupation: string | null;
-  neighborhood: string | null;
-  city: string | null;
+  registration_date: string | null;
+  profession: string | null;
+  district: string | null;
+  province: string | null;
   address: string | null;
+  member_type: string | null;
+  registry_number: string | null;
 }
 
 function MemberDetailPanel({ tc, onClose }: { tc: string; onClose: () => void }) {
@@ -35,7 +36,7 @@ function MemberDetailPanel({ tc, onClose }: { tc: string; onClose: () => void })
     const load = async () => {
       const { data, error } = await supabase
         .from('members')
-        .select('id, full_name, email, phone, tc_identity_no, membership_status, is_active, member_since, occupation, neighborhood, city, address')
+        .select('id, full_name, email, phone, tc_identity_no, is_active, registration_date, profession, district, province, address, member_type, registry_number')
         .eq('tc_identity_no', tc)
         .maybeSingle();
 
@@ -51,12 +52,13 @@ function MemberDetailPanel({ tc, onClose }: { tc: string; onClose: () => void })
     { label: 'Ad Soyad', value: member.full_name },
     { label: 'E-posta', value: member.email },
     { label: 'Telefon', value: member.phone },
-    { label: 'Üyelik Durumu', value: member.membership_status },
     { label: 'Aktif Mi', value: member.is_active },
-    { label: 'Üyelik Başlangıcı', value: member.member_since },
-    { label: 'Meslek', value: member.occupation },
-    { label: 'Mahalle/Köy', value: member.neighborhood },
-    { label: 'Şehir', value: member.city },
+    { label: 'Üye Tipi', value: member.member_type },
+    { label: 'Sicil No', value: member.registry_number },
+    { label: 'Kayıt Tarihi', value: member.registration_date ? new Date(member.registration_date).toLocaleDateString('tr-TR') : null },
+    { label: 'Meslek', value: member.profession },
+    { label: 'İlçe', value: member.district },
+    { label: 'İl', value: member.province },
     { label: 'Adres', value: member.address },
   ] : [];
 
