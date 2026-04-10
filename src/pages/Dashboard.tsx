@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search, Smartphone } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -190,6 +190,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
     { id: 'contact', label: 'İletişim', icon: Phone, pageKey: 'contact' },
     ...((currentMember?.is_admin || currentMember?.is_root) ? [
       { id: 'notifications', label: 'Bildirimler', icon: MessageSquare, pageKey: 'notifications' },
+      { id: 'push-notifications', label: 'Push Bildirimleri', icon: Smartphone, pageKey: 'push-notifications' },
     ] : []),
     ...((currentMember?.is_admin || currentMember?.is_root) ? [
       { id: 'inventory', label: 'Envanter Yönetimi', icon: Package, pageKey: 'inventory' },
@@ -208,7 +209,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory' || tab.pageKey === 'social-monitor' || tab.pageKey === 'member-query' || tab.pageKey === 'seo') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'push-notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory' || tab.pageKey === 'social-monitor' || tab.pageKey === 'member-query' || tab.pageKey === 'seo') return true;
     return isPageVisible(tab.pageKey);
   });
 
