@@ -107,11 +107,17 @@ export function PushNotificationsPanel() {
     setSuccess('');
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (!refreshed.session) throw new Error('Oturum suresi doldu, lutfen tekrar giris yapin.');
+      }
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+
       const { data: senderMember } = await supabase
         .from('members')
         .select('id')
-        .eq('auth_id', session?.user.id)
+        .eq('auth_id', currentSession?.user.id)
         .maybeSingle();
 
       const { data: notification, error: insertError } = await supabase
@@ -133,7 +139,7 @@ export function PushNotificationsPanel() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || VITE_SUPABASE_ANON_KEY}`,
+          Authorization: `Bearer ${currentSession?.access_token || VITE_SUPABASE_ANON_KEY}`,
         },
         body: JSON.stringify({
           notification_id: notification.id,
