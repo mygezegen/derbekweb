@@ -19,6 +19,7 @@ import MemberDetailScreen from '../screens/main/MemberDetailScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
 
 export type HomeStackParamList = {
   Home: undefined;
@@ -52,6 +53,7 @@ export type GuestTabParamList = {
   AnnouncementsTab: undefined;
   EventsTab: undefined;
   MembersTab: undefined;
+  NotificationsTab: undefined;
   AuthTab: undefined;
 };
 
@@ -61,6 +63,7 @@ export type MemberTabParamList = {
   EventsTab: undefined;
   DuesTab: undefined;
   MembersTab: undefined;
+  NotificationsTab: undefined;
   ProfileTab: undefined;
 };
 
@@ -149,6 +152,7 @@ const tabBarIcon = (routeName: string, focused: boolean, color: string, size: nu
   else if (routeName === 'EventsTab') iconName = focused ? 'calendar' : 'calendar-outline';
   else if (routeName === 'DuesTab') iconName = focused ? 'wallet' : 'wallet-outline';
   else if (routeName === 'MembersTab') iconName = focused ? 'people' : 'people-outline';
+  else if (routeName === 'NotificationsTab') iconName = focused ? 'notifications' : 'notifications-outline';
   else if (routeName === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
   else if (routeName === 'AuthTab') iconName = focused ? 'log-in' : 'log-in-outline';
   return <Ionicons name={iconName} size={size} color={color} />;
@@ -174,6 +178,18 @@ function GuestNavigator() {
       <GuestTab.Screen name="AnnouncementsTab" component={AnnouncementsStackNavigator} options={{ title: 'Duyurular' }} />
       <GuestTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
       <GuestTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
+      <GuestTab.Screen
+        name="NotificationsTab"
+        options={{
+          title: 'Bildirimler',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#b91c1c' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      >
+        {() => <NotificationsScreen navigation={undefined} />}
+      </GuestTab.Screen>
       <GuestTab.Screen name="AuthTab" component={AuthStackNavigator} options={{ title: 'Giriş Yap' }} />
     </GuestTab.Navigator>
   );
@@ -204,6 +220,18 @@ function MemberNavigator() {
         {() => <DuesScreen />}
       </MemberTab.Screen>
       <MemberTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
+      <MemberTab.Screen
+        name="NotificationsTab"
+        options={{
+          title: 'Bildirimler',
+          headerShown: true,
+          headerStyle: { backgroundColor: '#b91c1c' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      >
+        {() => <NotificationsScreen navigation={undefined} />}
+      </MemberTab.Screen>
       <MemberTab.Screen
         name="ProfileTab"
         options={{

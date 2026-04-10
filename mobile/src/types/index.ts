@@ -133,6 +133,20 @@ export interface ContactInfo {
   updated_at: string;
 }
 
+export interface PushNotification {
+  id: string;
+  title: string;
+  body: string;
+  recipient_type: 'all' | 'specific';
+  status: 'sending' | 'sent' | 'failed';
+  total_sent: number;
+  total_failed: number;
+  sent_at?: string;
+  created_at: string;
+  sent_by?: string;
+  members?: { full_name: string };
+}
+
 export interface ManagementInfo {
   id: string;
   member_id: string;
