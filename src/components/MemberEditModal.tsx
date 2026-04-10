@@ -319,14 +319,20 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
                   </select>
                 </Field>
                 <Field label="Üyelik Durumu">
-                  <select
-                    value={form.is_active ? 'active' : 'passive'}
-                    onChange={(e) => set('is_active', e.target.value === 'active')}
-                    className={inputCls}
-                  >
-                    <option value="active">Aktif</option>
-                    <option value="passive">Pasif</option>
-                  </select>
+                  {(member as any).pending_approval === true ? (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                      <span className="text-amber-700 text-sm font-medium">Onay Bekliyor</span>
+                    </div>
+                  ) : (
+                    <select
+                      value={form.is_active ? 'active' : 'passive'}
+                      onChange={(e) => set('is_active', e.target.value === 'active')}
+                      className={inputCls}
+                    >
+                      <option value="active">Aktif</option>
+                      <option value="passive">Pasif</option>
+                    </select>
+                  )}
                 </Field>
                 <Field label="Kayıt Tarihi">
                   <input

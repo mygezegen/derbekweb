@@ -480,16 +480,16 @@ export function MemberQueryPage() {
                   </div>
                 </div>
 
-                <div className={`px-6 py-4 ${
-                  debtInfo.discount_eligible ? 'bg-emerald-50' : 'bg-red-50'
-                }`}>
-                  <p className={`text-xs font-bold uppercase tracking-wider ${debtInfo.discount_eligible ? 'text-emerald-600' : 'text-red-600'}`}>
-                    Toplam Borç
-                  </p>
-                  <p className={`text-xl font-black mt-0.5 ${debtInfo.discount_eligible ? 'text-emerald-800' : 'text-red-800'}`}>
-                    {formatDebtAmount(debtInfo.total_debt)}
-                  </p>
-                </div>
+                {debtInfo.discount_eligible && (
+                  <div className="px-6 py-4 bg-emerald-50">
+                    <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+                      Toplam Borç
+                    </p>
+                    <p className="text-xl font-black mt-0.5 text-emerald-800">
+                      {formatDebtAmount(debtInfo.total_debt)}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

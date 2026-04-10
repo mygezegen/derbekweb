@@ -139,11 +139,12 @@ function generateTopPosts(account: string, platform: string, count = 5): TopPost
     const shares = Math.floor(baseLikes * (0.05 + Math.random() * 0.2));
     const totalEngagement = baseLikes + comments + shares;
 
-    const platformUrl: Record<string, string> = {
-      instagram: `https://instagram.com/${account}`,
-      twitter: `https://twitter.com/${account}`,
-      facebook: `https://facebook.com/${account}`,
-      youtube: `https://youtube.com/@${account}`,
+    const titleEncoded = encodeURIComponent(template.title);
+    const platformPostUrl: Record<string, string> = {
+      instagram: `https://www.instagram.com/${account}/`,
+      twitter: `https://twitter.com/search?q=from%3A${account}+${titleEncoded}`,
+      facebook: `https://www.facebook.com/${account}/posts`,
+      youtube: `https://www.youtube.com/@${account}/videos`,
     };
 
     posts.push({
@@ -154,7 +155,7 @@ function generateTopPosts(account: string, platform: string, count = 5): TopPost
       shares,
       total_engagement: totalEngagement,
       posted_at: postedAt,
-      url: platformUrl[platform] || undefined,
+      url: platformPostUrl[platform] || `https://${platform}.com/${account}`,
       description: `@${account} tarafından paylaşılan bu ${template.post_type} içerik yüksek etkileşim aldı. ${platform.charAt(0).toUpperCase() + platform.slice(1)} platformunda öne çıkan paylaşımlar arasına girdi.`,
     });
   }
@@ -393,12 +394,13 @@ Her hesap için aşağıdaki JSON formatında analiz sağla:
         "shares": 45,
         "total_engagement": 1330,
         "posted_at": "2026-03-01T10:00:00Z",
-        "description": "Bu gönderinin neden yüksek etkileşim aldığına dair 1-2 cümle açıklama"
+        "description": "Bu gönderinin neden yüksek etkileşim aldığına dair 1-2 cümle açıklama",
+        "url": "https://www.instagram.com/p/EXAMPLE123"
       }
     ]
   }
 ]
-top_posts alanına bu hesabın en çok etkileşim alan 5 gönderi tahmini olarak dahil et. Etkileşim sayılarını gerçekçi yap. Sadece JSON döndür.`,
+top_posts alanına bu hesabın en çok etkileşim alan 5 gönderi tahmini olarak dahil et. Etkileşim sayılarını gerçekçi yap. Her gönderi için url alanına o platforma uygun gerçekçi bir post URL'si yaz (Instagram için https://www.instagram.com/p/..., Twitter için https://twitter.com/hesap/status/... formatında). Sadece JSON döndür.`,
           },
         ],
         temperature: 0.7,

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package } from 'lucide-react';
+import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package, Clock, UserCheck, XCircle } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
 import { AddMemberModal } from './AddMemberModal';
 import { SocialMediaConfiguration } from './SocialMediaConfiguration';
@@ -85,7 +85,36 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
     }
   };
 
+  const pendingMembers = members.filter(m => (m as any).pending_approval === true);
   const adminCount = members.filter(m => m.is_admin).length;
+
+  const handleApproveMember = async (memberId: string) => {
+    if (!confirm('Bu üyeyi onaylamak istediğinize emin misiniz? Üye sisteme giriş yapabilir hale gelecektir.')) return;
+    try {
+      const { error } = await supabase
+        .from('members')
+        .update({ pending_approval: false, is_active: true })
+        .eq('id', memberId);
+      if (error) throw error;
+      loadMembers();
+    } catch (err) {
+      console.error('Error approving member:', err);
+    }
+  };
+
+  const handleRejectMember = async (memberId: string) => {
+    if (!confirm('Bu üyelik başvurusunu reddetmek istediğinize emin misiniz? Üye kaydı silinecektir.')) return;
+    try {
+      const { error } = await supabase
+        .from('members')
+        .delete()
+        .eq('id', memberId);
+      if (error) throw error;
+      loadMembers();
+    } catch (err) {
+      console.error('Error rejecting member:', err);
+    }
+  };
 
   const handleExportMembers = () => {
     const escapeXml = (val: unknown) => {
@@ -247,16 +276,62 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
         <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Üye Yönetimi</h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-6 md:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
           <div className="bg-blue-50 p-4 rounded-lg">
             <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">{members.length}</div>
             <p className="text-sm sm:text-base text-gray-600">Toplam Üye</p>
           </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="text-2xl sm:text-3xl font-bold text-purple-600 mb-2">{adminCount}</div>
+          <div className="bg-amber-50 p-4 rounded-lg">
+            <div className="text-2xl sm:text-3xl font-bold text-amber-600 mb-2">{pendingMembers.length}</div>
+            <p className="text-sm sm:text-base text-gray-600">Onay Bekleyen</p>
+          </div>
+          <div className="bg-emerald-50 p-4 rounded-lg">
+            <div className="text-2xl sm:text-3xl font-bold text-emerald-600 mb-2">{adminCount}</div>
             <p className="text-sm sm:text-base text-gray-600">Yönetici</p>
           </div>
         </div>
+
+        {pendingMembers.length > 0 && (
+          <div className="mb-6 border border-amber-200 rounded-xl overflow-hidden">
+            <div className="bg-amber-50 px-4 py-3 flex items-center gap-2 border-b border-amber-200">
+              <Clock size={16} className="text-amber-600" />
+              <h3 className="font-semibold text-amber-800 text-sm">Onay Bekleyen Başvurular ({pendingMembers.length})</h3>
+            </div>
+            <div className="divide-y divide-amber-100">
+              {pendingMembers.map((member) => (
+                <div key={member.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 bg-white hover:bg-amber-50/40 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-800 text-sm truncate">{member.full_name}</h4>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                        <Clock size={10} />
+                        Onay Bekliyor
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">{member.email}</p>
+                    {member.phone && <p className="text-xs text-gray-400">{member.phone}</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleApproveMember(member.id)}
+                      className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                    >
+                      <UserCheck size={13} />
+                      Onayla
+                    </button>
+                    <button
+                      onClick={() => handleRejectMember(member.id)}
+                      className="flex items-center gap-1.5 bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors whitespace-nowrap"
+                    >
+                      <XCircle size={13} />
+                      Reddet
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-2 mb-6">
           <button

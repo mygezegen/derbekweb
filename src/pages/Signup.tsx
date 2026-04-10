@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { UserPlus, Mail, Lock, User, Phone, Briefcase, MapPin, Users } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Phone, Briefcase, MapPin, Users, Clock, CheckCircle } from 'lucide-react';
 
-type SignupStep = 'email' | 'verify' | 'details';
+type SignupStep = 'email' | 'verify' | 'details' | 'pending';
 
 interface SignupFormData {
   email: string;
@@ -177,7 +177,9 @@ export function Signup() {
           father_name: formData.father_name,
           address: formData.address,
           profession: formData.profession,
-          phone: formData.phone
+          phone: formData.phone,
+          pending_approval: true,
+          is_active: false
         })
         .eq('auth_id', session.user.id);
 
@@ -196,13 +198,52 @@ export function Signup() {
         // E-posta gönderilemese bile kayıt tamamlandı
       }
 
-      navigate('/app');
+      setStep('pending');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bilgiler kaydedilirken hata oluştu');
     } finally {
       setLoading(false);
     }
   };
+
+  if (step === 'pending') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-amber-100 rounded-full mb-6">
+            <Clock className="w-10 h-10 text-amber-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Başvurunuz Alındı</h2>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            Üyelik başvurunuz başarıyla tamamlandı. Hesabınız yönetici onayından sonra aktif hale gelecektir.
+          </p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left space-y-2">
+            <div className="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+              <CheckCircle size={15} className="text-amber-600" />
+              Bilgileriniz kaydedildi
+            </div>
+            <div className="flex items-center gap-2 text-amber-800 text-sm font-semibold">
+              <CheckCircle size={15} className="text-amber-600" />
+              E-posta adresiniz doğrulandı
+            </div>
+            <div className="flex items-center gap-2 text-amber-500 text-sm">
+              <Clock size={15} />
+              Yönetici onayı bekleniyor...
+            </div>
+          </div>
+          <p className="text-xs text-gray-400 mb-6">
+            Onay işlemi tamamlandığında sisteme giriş yapabilirsiniz.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            className="w-full bg-emerald-600 text-white py-3 rounded-lg hover:bg-emerald-700 transition-colors font-medium"
+          >
+            Giriş Sayfasına Git
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'verify') {
     return (

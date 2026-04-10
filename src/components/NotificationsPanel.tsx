@@ -1,12 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Mail, MessageSquare, Users } from 'lucide-react';
+import { Mail, MessageSquare, Users, Tag } from 'lucide-react';
 import { sendSMS } from '../lib/smsService';
 import { MemberSelectionModal } from './MemberSelectionModal';
 
+interface MemberDebtInfo {
+  memberId: string;
+  totalDebt: number;
+}
+
+const PARAMETERS = [
+  { label: 'Ad Soyad', value: '{{ad_soyad}}', description: 'Üyenin tam adı' },
+  { label: 'Ad', value: '{{ad}}', description: 'Üyenin adı' },
+  { label: 'Borç Miktarı', value: '{{borc_miktari}}', description: 'Toplam borç miktarı (TL)' },
+];
+
+function resolveMessage(template: string, member: Member, debtAmount?: number): string {
+  const nameParts = (member.full_name || '').trim().split(' ');
+  const firstName = nameParts[0] || '';
+  return template
+    .replace(/\{\{ad_soyad\}\}/g, member.full_name || '')
+    .replace(/\{\{ad\}\}/g, firstName)
+    .replace(/\{\{borc_miktari\}\}/g, debtAmount !== undefined ? `${debtAmount.toFixed(2)} TL` : '0,00 TL');
+}
+
 export function NotificationsPanel() {
   const [members, setMembers] = useState<Member[]>([]);
+  const [debtorCount, setDebtorCount] = useState(0);
   const [notificationType, setNotificationType] = useState<'email' | 'sms'>('email');
   const [recipientType, setRecipientType] = useState<'all' | 'debtors' | 'specific'>('all');
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -16,17 +37,76 @@ export function NotificationsPanel() {
   const [sendingNotification, setSendingNotification] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showParamMenu, setShowParamMenu] = useState(false);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
+  const paramMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMembers();
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (paramMenuRef.current && !paramMenuRef.current.contains(e.target as Node)) {
+        setShowParamMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const loadMembers = async () => {
     const { data } = await supabase
       .from('members')
       .select('*')
+      .eq('is_active', true)
       .order('full_name', { ascending: true });
-    setMembers(data || []);
+    const activeMembers = data || [];
+    setMembers(activeMembers);
+
+    const { data: debtorsData } = await supabase
+      .from('member_dues')
+      .select('member_id')
+      .neq('status', 'paid');
+    const debtorMemberIds = new Set(debtorsData?.map(d => d.member_id) || []);
+    const activeDebtors = activeMembers.filter(m => debtorMemberIds.has(m.id));
+    setDebtorCount(activeDebtors.length);
+  };
+
+  const fetchMemberDebts = async (memberIds: string[]): Promise<MemberDebtInfo[]> => {
+    if (memberIds.length === 0) return [];
+    const { data } = await supabase
+      .from('member_dues')
+      .select('member_id, dues:dues_id(amount), paid_amount, status')
+      .in('member_id', memberIds)
+      .neq('status', 'paid');
+
+    const debtMap: Record<string, number> = {};
+    for (const row of data || []) {
+      const duesAmount = (row.dues as { amount: number } | null)?.amount ?? 0;
+      const paidAmount = Number(row.paid_amount ?? 0);
+      const remaining = duesAmount - paidAmount;
+      debtMap[row.member_id] = (debtMap[row.member_id] || 0) + remaining;
+    }
+    return memberIds.map(id => ({ memberId: id, totalDebt: debtMap[id] ?? 0 }));
+  };
+
+  const insertParam = (param: string) => {
+    const textarea = messageRef.current;
+    if (!textarea) {
+      setNotificationMessage(prev => prev + param);
+      setShowParamMenu(false);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newValue = notificationMessage.substring(0, start) + param + notificationMessage.substring(end);
+    setNotificationMessage(newValue);
+    setShowParamMenu(false);
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + param.length, start + param.length);
+    }, 0);
   };
 
   const handleSendNotification = async (e: React.FormEvent) => {
@@ -56,7 +136,8 @@ export function NotificationsPanel() {
           .from('member_dues')
           .select('member_id')
           .neq('status', 'paid');
-        recipientIds = Array.from(new Set(debtorsData?.map(d => d.member_id) || []));
+        const debtorMemberIds = new Set(debtorsData?.map(d => d.member_id) || []);
+        recipientIds = members.filter(m => debtorMemberIds.has(m.id)).map(m => m.id);
       } else if (recipientType === 'specific') {
         if (selectedMemberIds.length === 0) {
           throw new Error('Lütfen en az bir üye seçin');
@@ -91,13 +172,51 @@ export function NotificationsPanel() {
 
       if (recipientsError) throw recipientsError;
 
-      if (notificationType === 'sms') {
-        const recipientMembers = members.filter(m => recipientIds.includes(m.id));
-        const phoneNumbers = recipientMembers
-          .map(m => m.phone)
-          .filter(phone => phone && phone.trim().length > 0);
+      const hasParams = notificationMessage.includes('{{');
+      let memberDebts: MemberDebtInfo[] = [];
+      if (hasParams) {
+        memberDebts = await fetchMemberDebts(recipientIds);
+      }
 
-        if (phoneNumbers.length > 0) {
+      const recipientMembers = members.filter(m => recipientIds.includes(m.id));
+
+      if (notificationType === 'sms') {
+        const smsMembers = recipientMembers.filter(m => m.phone && m.phone.trim().length > 0);
+
+        if (smsMembers.length === 0) {
+          throw new Error('Telefon numarası bulunan alıcı yok');
+        }
+
+        if (hasParams) {
+          let sentCount = 0;
+          let failCount = 0;
+          for (const member of smsMembers) {
+            const debtInfo = memberDebts.find(d => d.memberId === member.id);
+            const personalizedMsg = resolveMessage(notificationMessage, member, debtInfo?.totalDebt);
+            const smsResult = await sendSMS({
+              recipients: [member.phone!],
+              message: personalizedMsg,
+            });
+            if (smsResult.success) {
+              sentCount++;
+            } else {
+              failCount++;
+            }
+          }
+
+          await supabase
+            .from('notifications')
+            .update({ status: failCount === smsMembers.length ? 'failed' : 'sent' })
+            .eq('id', notification.id);
+
+          await supabase
+            .from('notification_recipients')
+            .update({ status: 'sent', sent_at: new Date().toISOString() })
+            .eq('notification_id', notification.id);
+
+          setSuccess(`SMS başarıyla gönderildi. ${sentCount} alıcıya ulaştı.${failCount > 0 ? ` ${failCount} gönderilemedi.` : ''}`);
+        } else {
+          const phoneNumbers = smsMembers.map(m => m.phone!);
           const smsResult = await sendSMS({
             recipients: phoneNumbers,
             message: notificationMessage,
@@ -118,14 +237,11 @@ export function NotificationsPanel() {
             .eq('notification_id', notification.id);
 
           setSuccess(`SMS başarıyla gönderildi. ${phoneNumbers.length} alıcıya ulaştı. Sipariş ID: ${smsResult.orderId}`);
-        } else {
-          throw new Error('Telefon numarası bulunan alıcı yok');
         }
       } else {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) throw new Error('Oturum bulunamadı');
 
-        const recipientMembers = members.filter(m => recipientIds.includes(m.id));
         const emailRecipients = recipientMembers.filter(m => m.email && m.email.trim().length > 0);
 
         if (emailRecipients.length === 0) {
@@ -138,6 +254,14 @@ export function NotificationsPanel() {
 
         for (const member of emailRecipients) {
           try {
+            const debtInfo = memberDebts.find(d => d.memberId === member.id);
+            const personalizedMsg = hasParams
+              ? resolveMessage(notificationMessage, member, debtInfo?.totalDebt)
+              : notificationMessage;
+            const personalizedTitle = hasParams
+              ? resolveMessage(notificationTitle, member, debtInfo?.totalDebt)
+              : notificationTitle;
+
             const response = await fetch(apiUrl, {
               method: 'POST',
               headers: {
@@ -146,10 +270,10 @@ export function NotificationsPanel() {
               },
               body: JSON.stringify({
                 to: member.email,
-                subject: notificationTitle,
+                subject: personalizedTitle,
                 html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
-                  <h2 style="color: #1f2937;">${notificationTitle}</h2>
-                  <div style="color: #4b5563; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${notificationMessage}</div>
+                  <h2 style="color: #1f2937;">${personalizedTitle}</h2>
+                  <div style="color: #4b5563; font-size: 16px; line-height: 1.6; white-space: pre-wrap;">${personalizedMsg}</div>
                   <hr style="margin-top: 32px; border-color: #e5e7eb;" />
                   <p style="color: #9ca3af; font-size: 12px;">Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği</p>
                 </div>`,
@@ -227,6 +351,7 @@ export function NotificationsPanel() {
         <p className="text-xs sm:text-sm text-blue-700">
           Bu sayfadan üyelerinize toplu e-posta veya SMS bildirimi gönderebilirsiniz.
           SMS gönderimi için SMS Yapılandırması sayfasından İletimerkezi.com API bilgilerinizi tanımlamanız gerekmektedir.
+          Mesaj içinde <code className="bg-blue-100 px-1 rounded">{"{{ad_soyad}}"}</code>, <code className="bg-blue-100 px-1 rounded">{"{{ad}}"}</code> ve <code className="bg-blue-100 px-1 rounded">{"{{borc_miktari}}"}</code> parametrelerini kullanarak kişiselleştirilmiş mesaj gönderebilirsiniz.
         </p>
       </div>
 
@@ -305,20 +430,55 @@ export function NotificationsPanel() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Mesaj
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Mesaj
+            </label>
+            <div className="relative" ref={paramMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowParamMenu(prev => !prev)}
+                className="flex items-center gap-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border border-gray-300 transition-colors"
+              >
+                <Tag size={13} />
+                Parametre Ekle
+              </button>
+              {showParamMenu && (
+                <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[220px] py-1.5 overflow-hidden">
+                  {PARAMETERS.map(param => (
+                    <button
+                      key={param.value}
+                      type="button"
+                      onClick={() => insertParam(param.value)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors"
+                    >
+                      <span className="block text-sm font-medium text-gray-800">{param.label}</span>
+                      <span className="block text-xs text-gray-400 font-mono mt-0.5">{param.value}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <textarea
+            ref={messageRef}
             value={notificationMessage}
             onChange={(e) => setNotificationMessage(e.target.value)}
             required
             rows={6}
-            placeholder="Bildirim mesajınızı yazın..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            placeholder="Bildirim mesajınızı yazın... Parametre eklemek için 'Parametre Ekle' butonunu kullanın."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent font-mono text-sm"
           />
-          <p className="text-sm text-gray-500 mt-1">
-            {notificationMessage.length} karakter
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <p className="text-xs text-gray-400">
+              {notificationMessage.length} karakter
+            </p>
+            {notificationMessage.includes('{{') && (
+              <p className="text-xs text-amber-600 font-medium">
+                Parametreli mesaj - her alıcıya ayrı ayrı gönderilecek
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-gray-200">
@@ -337,12 +497,12 @@ export function NotificationsPanel() {
         <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 md:mb-4">Alıcı Özeti</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <div className="bg-blue-50 rounded-lg p-3 md:p-4">
-            <p className="text-xs sm:text-sm text-blue-700 mb-1">Toplam Üye</p>
+            <p className="text-xs sm:text-sm text-blue-700 mb-1">Toplam Aktif Üye</p>
             <p className="text-xl sm:text-2xl font-bold text-blue-800">{members.length}</p>
           </div>
           <div className="bg-red-50 rounded-lg p-3 md:p-4">
             <p className="text-xs sm:text-sm text-red-700 mb-1">Borçlu Üye</p>
-            <p className="text-xl sm:text-2xl font-bold text-red-800">{members.length}</p>
+            <p className="text-xl sm:text-2xl font-bold text-red-800">{debtorCount}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-3 md:p-4">
             <p className="text-xs sm:text-sm text-green-700 mb-1">Seçili Alıcı</p>
@@ -350,7 +510,7 @@ export function NotificationsPanel() {
               {recipientType === 'all'
                 ? members.length
                 : recipientType === 'debtors'
-                ? '...'
+                ? debtorCount
                 : selectedMemberIds.length}
             </p>
           </div>

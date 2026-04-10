@@ -1,14 +1,41 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Search, Eye, X, Shield, User, Crown, Pencil, Trash2 } from 'lucide-react';
+import { Search, Eye, X, Shield, User, Crown, Pencil, Trash2, Wallet, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
 import { MemberEditModal } from './MemberEditModal';
+
+interface MemberDuesItem {
+  id: string;
+  status: 'pending' | 'paid' | 'overdue' | 'cancelled';
+  paid_amount: number;
+  paid_at?: string;
+  payment_method?: string;
+  notes?: string;
+  dues?: {
+    title: string;
+    amount: number;
+    period_month: number;
+    period_year: number;
+    due_date: string;
+  };
+}
+
+const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+const DUES_STATUS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  paid: { label: 'Ödendi', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200', icon: <CheckCircle size={14} className="text-emerald-600" /> },
+  pending: { label: 'Bekliyor', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200', icon: <Clock size={14} className="text-amber-600" /> },
+  overdue: { label: 'Gecikmiş', color: 'text-red-700', bg: 'bg-red-50 border-red-200', icon: <AlertCircle size={14} className="text-red-600" /> },
+  cancelled: { label: 'İptal', color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200', icon: <XCircle size={14} className="text-gray-500" /> },
+};
 
 export function MemberDirectory() {
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [memberDues, setMemberDues] = useState<MemberDuesItem[]>([]);
+  const [duesLoading, setDuesLoading] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
 
@@ -77,6 +104,27 @@ export function MemberDirectory() {
       console.error('Error updating role:', error);
       alert('Rol güncellenirken bir hata oluştu.');
     }
+  };
+
+  const loadMemberDues = async (memberId: string) => {
+    setDuesLoading(true);
+    try {
+      const { data } = await supabase
+        .from('member_dues')
+        .select('id, status, paid_amount, paid_at, payment_method, notes, dues(title, amount, period_month, period_year, due_date)')
+        .eq('member_id', memberId)
+        .order('created_at', { ascending: false });
+      setMemberDues((data as MemberDuesItem[]) || []);
+    } catch {
+      setMemberDues([]);
+    } finally {
+      setDuesLoading(false);
+    }
+  };
+
+  const openMemberDetail = (member: Member) => {
+    setSelectedMember(member);
+    loadMemberDues(member.id);
   };
 
   const handleDeleteMember = async (member: Member) => {
@@ -221,7 +269,7 @@ export function MemberDirectory() {
                   <td className="px-2 py-3">
                     <div className="flex items-center gap-1.5">
                       <button
-                        onClick={() => setSelectedMember(member)}
+                        onClick={() => openMemberDetail(member)}
                         className="text-blue-600 hover:text-blue-700 transition-colors"
                         title="Detayları Görüntüle"
                       >
@@ -339,6 +387,97 @@ export function MemberDirectory() {
                 <InfoField label="Baba Adı" value={selectedMember.father_name} />
                 <InfoField label="Ana Adı" value={selectedMember.mother_name} />
                 <InfoField label="Kayıt Tarihi (Sistem)" value={new Date(selectedMember.joined_at).toLocaleDateString('tr-TR')} />
+              </div>
+
+              <div className="border-t pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Wallet size={18} className="text-gray-600" />
+                  <h4 className="font-semibold text-gray-800 text-base">Aidat / Borç Durumu</h4>
+                </div>
+
+                {duesLoading ? (
+                  <div className="text-sm text-gray-500 py-4 text-center">Yükleniyor...</div>
+                ) : memberDues.length === 0 ? (
+                  <div className="text-sm text-gray-400 py-6 text-center bg-gray-50 rounded-lg">Aidat kaydı bulunamadı</div>
+                ) : (
+                  <>
+                    {(() => {
+                      const totalDebt = memberDues
+                        .filter(d => d.status === 'pending' || d.status === 'overdue')
+                        .reduce((sum, d) => sum + ((d.dues?.amount || 0) - (d.paid_amount || 0)), 0);
+                      const overdueCount = memberDues.filter(d => d.status === 'overdue').length;
+                      const paidCount = memberDues.filter(d => d.status === 'paid').length;
+                      const pendingCount = memberDues.filter(d => d.status === 'pending').length;
+                      return (
+                        <>
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                              <div className="text-2xl font-black text-red-700">{overdueCount}</div>
+                              <div className="text-xs text-red-600 font-medium mt-0.5">Gecikmiş</div>
+                            </div>
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                              <div className="text-2xl font-black text-amber-700">{pendingCount}</div>
+                              <div className="text-xs text-amber-600 font-medium mt-0.5">Bekleyen</div>
+                            </div>
+                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
+                              <div className="text-2xl font-black text-emerald-700">{paidCount}</div>
+                              <div className="text-xs text-emerald-600 font-medium mt-0.5">Ödenen</div>
+                            </div>
+                          </div>
+                          {totalDebt > 0 && (
+                            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
+                              <AlertCircle size={16} className="text-red-600 flex-shrink-0" />
+                              <span className="text-sm text-red-700 font-medium">
+                                Toplam Borç: <span className="font-black text-red-800">{totalDebt.toLocaleString('tr-TR')} ₺</span>
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+
+                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                      {memberDues.map(debt => {
+                        const cfg = DUES_STATUS[debt.status] || DUES_STATUS.pending;
+                        const month = debt.dues?.period_month ? MONTHS[(debt.dues.period_month - 1) % 12] : '';
+                        const year = debt.dues?.period_year || '';
+                        const remaining = (debt.dues?.amount || 0) - (debt.paid_amount || 0);
+                        return (
+                          <div key={debt.id} className={`flex items-start gap-3 rounded-lg border p-3 ${cfg.bg}`}>
+                            <div className="mt-0.5 flex-shrink-0">{cfg.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm font-semibold text-gray-800 truncate">{debt.dues?.title || 'Aidat'}</span>
+                                <span className={`text-xs font-bold flex-shrink-0 ${cfg.color}`}>{cfg.label}</span>
+                              </div>
+                              {(month || year) && (
+                                <div className="text-xs text-gray-500 mt-0.5">{month} {year}</div>
+                              )}
+                              <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+                                <span className="text-xs text-gray-600">Tutar: <span className="font-semibold text-gray-800">{(debt.dues?.amount || 0).toLocaleString('tr-TR')} ₺</span></span>
+                                {debt.paid_amount > 0 && (
+                                  <span className="text-xs text-gray-600">Ödenen: <span className="font-semibold text-emerald-700">{debt.paid_amount.toLocaleString('tr-TR')} ₺</span></span>
+                                )}
+                                {(debt.status === 'pending' || debt.status === 'overdue') && remaining > 0 && (
+                                  <span className="text-xs text-gray-600">Kalan: <span className={`font-semibold ${cfg.color}`}>{remaining.toLocaleString('tr-TR')} ₺</span></span>
+                                )}
+                              </div>
+                              {debt.dues?.due_date && (
+                                <div className="text-xs text-gray-400 mt-1">Son ödeme: {new Date(debt.dues.due_date).toLocaleDateString('tr-TR')}</div>
+                              )}
+                              {debt.paid_at && (
+                                <div className="text-xs text-emerald-600 mt-0.5">Ödeme tarihi: {new Date(debt.paid_at).toLocaleDateString('tr-TR')}</div>
+                              )}
+                              {debt.notes && (
+                                <div className="text-xs text-gray-500 italic mt-0.5">{debt.notes}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

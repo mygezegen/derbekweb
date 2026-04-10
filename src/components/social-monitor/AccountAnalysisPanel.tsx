@@ -116,12 +116,12 @@ export function AccountAnalysisPanel() {
     setResults([]);
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !session?.access_token) {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
         const { data: refreshed } = await supabase.auth.refreshSession();
-        if (!refreshed.session?.access_token) throw new Error('Oturum geçersiz. Lütfen tekrar giriş yapın.');
+        session = refreshed.session;
       }
-      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Oturum geçersiz. Lütfen tekrar giriş yapın.');
 
       const selectedWithPlatforms = selectedAccounts.map(handle => {
         const acc = accounts.find(a => a.account_handle === handle);
@@ -133,7 +133,8 @@ export function AccountAnalysisPanel() {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${freshSession?.access_token}`,
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
