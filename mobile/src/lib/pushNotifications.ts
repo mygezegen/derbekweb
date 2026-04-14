@@ -11,10 +11,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function registerForPushNotifications(memberId: string): Promise<string | null> {
-  if (!Device.isDevice) {
-    return null;
-  }
+async function requestAndGetToken(): Promise<string | null> {
+  if (!Device.isDevice) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -24,9 +22,7 @@ export async function registerForPushNotifications(memberId: string): Promise<st
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') {
-    return null;
-  }
+  if (finalStatus !== 'granted') return null;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -38,27 +34,62 @@ export async function registerForPushNotifications(memberId: string): Promise<st
   }
 
   const tokenData = await Notifications.getExpoPushTokenAsync();
-  const token = tokenData.data;
+  return tokenData.data;
+}
 
-  await saveDeviceToken(memberId, token);
+export async function registerForPushNotifications(memberId: string): Promise<string | null> {
+  const token = await requestAndGetToken();
+  if (!token) return null;
 
+  await linkTokenToMember(memberId, token);
   return token;
 }
 
-async function saveDeviceToken(memberId: string, token: string): Promise<void> {
+export async function registerGuestDeviceToken(): Promise<string | null> {
+  const token = await requestAndGetToken();
+  if (!token) return null;
+
+  await saveGuestToken(token);
+  return token;
+}
+
+async function saveGuestToken(token: string): Promise<void> {
   const platform = Platform.OS as 'ios' | 'android';
 
   const { error } = await supabase
     .from('device_tokens')
     .upsert(
       {
-        member_id: memberId,
         token,
+        member_id: null,
         platform,
         is_active: true,
+        is_guest: true,
         last_seen_at: new Date().toISOString(),
       },
-      { onConflict: 'member_id,token' }
+      { onConflict: 'token' }
+    );
+
+  if (error) {
+    console.error('Guest device token kaydetme hatasi:', error);
+  }
+}
+
+async function linkTokenToMember(memberId: string, token: string): Promise<void> {
+  const platform = Platform.OS as 'ios' | 'android';
+
+  const { error } = await supabase
+    .from('device_tokens')
+    .upsert(
+      {
+        token,
+        member_id: memberId,
+        platform,
+        is_active: true,
+        is_guest: false,
+        last_seen_at: new Date().toISOString(),
+      },
+      { onConflict: 'token' }
     );
 
   if (error) {
@@ -72,8 +103,7 @@ export async function deactivateDeviceToken(memberId: string): Promise<void> {
 
   await supabase
     .from('device_tokens')
-    .update({ is_active: false })
-    .eq('member_id', memberId)
+    .update({ is_active: false, member_id: null, is_guest: true })
     .eq('token', tokenData.data);
 }
 

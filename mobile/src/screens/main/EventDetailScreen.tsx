@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Event, EventParticipant } from '../../types';
+import { stripHtml } from '../../lib/htmlUtils';
 
 type Props = { route: any };
 
@@ -112,7 +113,7 @@ export default function EventDetailScreen({ route }: Props) {
       {event.description && (
         <View style={styles.descCard}>
           <Text style={styles.descTitle}>Etkinlik Hakkında</Text>
-          <Text style={styles.descText}>{event.description}</Text>
+          <Text style={styles.descText}>{stripHtml(event.description)}</Text>
         </View>
       )}
 

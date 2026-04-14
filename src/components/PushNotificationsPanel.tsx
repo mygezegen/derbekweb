@@ -12,6 +12,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { MemberSelectionModal } from './MemberSelectionModal';
 
@@ -32,12 +34,14 @@ interface DeviceTokenStats {
   total: number;
   ios: number;
   android: number;
+  members: number;
+  guests: number;
 }
 
 export function PushNotificationsPanel() {
   const [members, setMembers] = useState<Member[]>([]);
   const [history, setHistory] = useState<PushNotification[]>([]);
-  const [tokenStats, setTokenStats] = useState<DeviceTokenStats>({ total: 0, ios: 0, android: 0 });
+  const [tokenStats, setTokenStats] = useState<DeviceTokenStats>({ total: 0, ios: 0, android: 0, members: 0, guests: 0 });
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [recipientType, setRecipientType] = useState<'all' | 'specific'>('all');
@@ -80,7 +84,7 @@ export function PushNotificationsPanel() {
   const loadTokenStats = async () => {
     const { data } = await supabase
       .from('device_tokens')
-      .select('platform')
+      .select('platform, member_id, is_guest')
       .eq('is_active', true);
 
     if (data) {
@@ -88,6 +92,8 @@ export function PushNotificationsPanel() {
         total: data.length,
         ios: data.filter((t) => t.platform === 'ios').length,
         android: data.filter((t) => t.platform === 'android').length,
+        members: data.filter((t) => t.member_id !== null && !t.is_guest).length,
+        guests: data.filter((t) => t.member_id === null || t.is_guest).length,
       });
     }
   };
@@ -210,18 +216,36 @@ export function PushNotificationsPanel() {
       </div>
 
       {/* Token istatistikleri */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
             <Smartphone size={20} className="text-blue-600" />
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{tokenStats.total}</p>
-            <p className="text-xs text-gray-500">Kayitli Cihaz</p>
+            <p className="text-xs text-gray-500">Toplam Cihaz</p>
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+            <UserCheck size={20} className="text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{tokenStats.members}</p>
+            <p className="text-xs text-gray-500">Üye Cihazı</p>
+          </div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
+            <UserX size={20} className="text-amber-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900">{tokenStats.guests}</p>
+            <p className="text-xs text-gray-500">Misafir Cihazı</p>
+          </div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
             <Smartphone size={20} className="text-gray-600" />
           </div>
           <div>
@@ -230,7 +254,7 @@ export function PushNotificationsPanel() {
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center flex-shrink-0">
             <Smartphone size={20} className="text-green-600" />
           </div>
           <div>

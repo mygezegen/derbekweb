@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useDrawer } from '../contexts/DrawerContext';
 
 import HomeScreen from '../screens/main/HomeScreen';
 import AnnouncementsScreen from '../screens/main/AnnouncementsScreen';
@@ -20,60 +22,12 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import SignupScreen from '../screens/auth/SignupScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
-
-export type HomeStackParamList = {
-  Home: undefined;
-  GalleryList: undefined;
-  GalleryDetail: { galleryId: string; title: string };
-};
-
-export type AnnouncementsStackParamList = {
-  Announcements: undefined;
-  AnnouncementDetail: { id: string };
-};
-
-export type EventsStackParamList = {
-  Events: undefined;
-  EventDetail: { id: string };
-};
-
-export type MembersStackParamList = {
-  Members: undefined;
-  MemberDetail: { memberId: string };
-};
-
-export type AuthStackParamList = {
-  Login: undefined;
-  Signup: undefined;
-  ForgotPassword: undefined;
-};
-
-export type GuestTabParamList = {
-  HomeTab: undefined;
-  AnnouncementsTab: undefined;
-  EventsTab: undefined;
-  MembersTab: undefined;
-  NotificationsTab: undefined;
-  AuthTab: undefined;
-};
-
-export type MemberTabParamList = {
-  HomeTab: undefined;
-  AnnouncementsTab: undefined;
-  EventsTab: undefined;
-  DuesTab: undefined;
-  MembersTab: undefined;
-  NotificationsTab: undefined;
-  ProfileTab: undefined;
-};
-
-const HomeStack = createNativeStackNavigator<HomeStackParamList>();
-const AnnouncementsStack = createNativeStackNavigator<AnnouncementsStackParamList>();
-const EventsStack = createNativeStackNavigator<EventsStackParamList>();
-const MembersStack = createNativeStackNavigator<MembersStackParamList>();
-const AuthStack = createNativeStackNavigator<AuthStackParamList>();
-const GuestTab = createBottomTabNavigator<GuestTabParamList>();
-const MemberTab = createBottomTabNavigator<MemberTabParamList>();
+import PharmacyScreen from '../screens/main/PharmacyScreen';
+import ContactScreen from '../screens/main/ContactScreen';
+import WhatsAppScreen from '../screens/main/WhatsAppScreen';
+import TreasuryScreen from '../screens/main/TreasuryScreen';
+import DuesAdminScreen from '../screens/main/DuesAdminScreen';
+import DrawerMenu from '../components/DrawerMenu';
 
 const styles = StyleSheet.create({
   tabBar: {
@@ -90,47 +44,157 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabLabel: { fontSize: 11, fontWeight: '600' },
+  menuBtn: {
+    marginLeft: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
-const stackHeaderOptions = {
+function MenuButton() {
+  const { openDrawer } = useDrawer();
+  return (
+    <TouchableOpacity style={styles.menuBtn} onPress={openDrawer}>
+      <Ionicons name="menu" size={22} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
+const sharedHeaderOptions = {
   headerStyle: { backgroundColor: '#b91c1c' },
   headerTintColor: '#fff',
   headerTitleStyle: { fontWeight: '700' as const },
+  headerLeft: () => <MenuButton />,
 };
+
+const sharedTabOptions = {
+  tabBarStyle: styles.tabBar,
+  tabBarActiveTintColor: '#b91c1c',
+  tabBarInactiveTintColor: '#9ca3af',
+  tabBarLabelStyle: styles.tabLabel,
+};
+
+const tabBarIcon = (routeName: string, focused: boolean, color: string, size: number) => {
+  const icons: Record<string, [string, string]> = {
+    HomeTab: ['home', 'home-outline'],
+    AnnouncementsTab: ['megaphone', 'megaphone-outline'],
+    EventsTab: ['calendar', 'calendar-outline'],
+    DuesTab: ['wallet', 'wallet-outline'],
+    MembersTab: ['people', 'people-outline'],
+    NotificationsTab: ['notifications', 'notifications-outline'],
+    ProfileTab: ['person', 'person-outline'],
+    AuthTab: ['log-in', 'log-in-outline'],
+  };
+  const [activeIcon, inactiveIcon] = icons[routeName] || ['ellipse', 'ellipse-outline'];
+  return <Ionicons name={(focused ? activeIcon : inactiveIcon) as any} size={size} color={color} />;
+};
+
+type HomeStackParamList = {
+  HomeMain: undefined;
+  Pharmacy: undefined;
+  Contact: undefined;
+  WhatsApp: undefined;
+  GalleryList: undefined;
+  GalleryDetail: { galleryId: string; title: string };
+  Treasury: undefined;
+  DuesAdmin: undefined;
+};
+
+type AnnouncementsStackParamList = {
+  AnnouncementsMain: undefined;
+  AnnouncementDetail: { id: string };
+};
+
+type EventsStackParamList = {
+  EventsMain: undefined;
+  EventDetail: { id: string };
+};
+
+type MembersStackParamList = {
+  MembersMain: undefined;
+  MemberDetail: { memberId: string };
+};
+
+type AuthStackParamList = {
+  Login: undefined;
+  Signup: undefined;
+  ForgotPassword: undefined;
+};
+
+const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const AnnouncementsStack = createNativeStackNavigator<AnnouncementsStackParamList>();
+const EventsStack = createNativeStackNavigator<EventsStackParamList>();
+const MembersStack = createNativeStackNavigator<MembersStackParamList>();
+const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const GuestTab = createBottomTabNavigator();
+const MemberTab = createBottomTabNavigator();
+
+const HOME_STACK_SCREENS: Record<string, boolean> = {
+  Pharmacy: true,
+  Contact: true,
+  WhatsApp: true,
+  Gallery: true,
+  Treasury: true,
+  DuesAdmin: true,
+};
+
+function HomeMainWrapper({ navigation }: { navigation: any }) {
+  const { pendingNavigation, clearPendingNavigation } = useDrawer();
+
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    if (HOME_STACK_SCREENS[pendingNavigation]) {
+      const screenName = pendingNavigation === 'Gallery' ? 'GalleryList' : pendingNavigation;
+      clearPendingNavigation();
+      navigation.navigate(screenName);
+    }
+  }, [pendingNavigation, clearPendingNavigation, navigation]);
+
+  return <HomeScreen navigation={navigation} />;
+}
 
 function HomeStackNavigator() {
   return (
-    <HomeStack.Navigator screenOptions={stackHeaderOptions}>
-      <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: 'Ana Sayfa' }} />
-      <HomeStack.Screen name="GalleryList" component={GalleryScreen} options={{ title: 'Galeri' }} />
-      <HomeStack.Screen name="GalleryDetail" component={GalleryDetailScreen} options={({ route }) => ({ title: route.params.title })} />
+    <HomeStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <HomeStack.Screen name="HomeMain" component={HomeMainWrapper} options={{ title: 'Ana Sayfa' }} />
+      <HomeStack.Screen name="GalleryList" component={GalleryScreen} options={{ title: 'Galeri', headerLeft: undefined }} />
+      <HomeStack.Screen name="GalleryDetail" component={GalleryDetailScreen} options={({ route }) => ({ title: route.params.title, headerLeft: undefined })} />
+      <HomeStack.Screen name="Pharmacy" component={PharmacyScreen} options={{ title: 'Nöbetçi Eczane', headerLeft: undefined }} />
+      <HomeStack.Screen name="Contact" component={ContactScreen} options={{ title: 'İletişim', headerLeft: undefined }} />
+      <HomeStack.Screen name="WhatsApp" component={WhatsAppScreen} options={{ title: 'WhatsApp', headerLeft: undefined }} />
+      <HomeStack.Screen name="Treasury" component={TreasuryScreen} options={{ title: 'Kasa Yönetimi', headerLeft: undefined }} />
+      <HomeStack.Screen name="DuesAdmin" component={DuesAdminScreen} options={{ title: 'Aidat Yönetimi', headerLeft: undefined }} />
     </HomeStack.Navigator>
   );
 }
 
 function AnnouncementsStackNavigator() {
   return (
-    <AnnouncementsStack.Navigator screenOptions={stackHeaderOptions}>
-      <AnnouncementsStack.Screen name="Announcements" component={AnnouncementsScreen} options={{ title: 'Duyurular' }} />
-      <AnnouncementsStack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreen} options={{ title: 'Duyuru Detayı' }} />
+    <AnnouncementsStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <AnnouncementsStack.Screen name="AnnouncementsMain" component={AnnouncementsScreen} options={{ title: 'Duyurular' }} />
+      <AnnouncementsStack.Screen name="AnnouncementDetail" component={AnnouncementDetailScreen} options={{ title: 'Duyuru Detayı', headerLeft: undefined }} />
     </AnnouncementsStack.Navigator>
   );
 }
 
 function EventsStackNavigator() {
   return (
-    <EventsStack.Navigator screenOptions={stackHeaderOptions}>
-      <EventsStack.Screen name="Events" component={EventsScreen} options={{ title: 'Etkinlikler' }} />
-      <EventsStack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Etkinlik Detayı' }} />
+    <EventsStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <EventsStack.Screen name="EventsMain" component={EventsScreen} options={{ title: 'Etkinlikler' }} />
+      <EventsStack.Screen name="EventDetail" component={EventDetailScreen} options={{ title: 'Etkinlik Detayı', headerLeft: undefined }} />
     </EventsStack.Navigator>
   );
 }
 
 function MembersStackNavigator() {
   return (
-    <MembersStack.Navigator screenOptions={stackHeaderOptions}>
-      <MembersStack.Screen name="Members" component={MembersScreen} options={{ title: 'Üyeler' }} />
-      <MembersStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Üye Detayı' }} />
+    <MembersStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <MembersStack.Screen name="MembersMain" component={MembersScreen} options={{ title: 'Üyeler' }} />
+      <MembersStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Üye Detayı', headerLeft: undefined }} />
     </MembersStack.Navigator>
   );
 }
@@ -145,27 +209,34 @@ function AuthStackNavigator() {
   );
 }
 
-const tabBarIcon = (routeName: string, focused: boolean, color: string, size: number) => {
-  let iconName: any;
-  if (routeName === 'HomeTab') iconName = focused ? 'home' : 'home-outline';
-  else if (routeName === 'AnnouncementsTab') iconName = focused ? 'megaphone' : 'megaphone-outline';
-  else if (routeName === 'EventsTab') iconName = focused ? 'calendar' : 'calendar-outline';
-  else if (routeName === 'DuesTab') iconName = focused ? 'wallet' : 'wallet-outline';
-  else if (routeName === 'MembersTab') iconName = focused ? 'people' : 'people-outline';
-  else if (routeName === 'NotificationsTab') iconName = focused ? 'notifications' : 'notifications-outline';
-  else if (routeName === 'ProfileTab') iconName = focused ? 'person' : 'person-outline';
-  else if (routeName === 'AuthTab') iconName = focused ? 'log-in' : 'log-in-outline';
-  return <Ionicons name={iconName} size={size} color={color} />;
+const TAB_SCREEN_MAP: Record<string, string> = {
+  Home: 'HomeTab',
+  Announcements: 'AnnouncementsTab',
+  Events: 'EventsTab',
+  Dues: 'DuesTab',
+  Members: 'MembersTab',
+  Notifications: 'NotificationsTab',
+  Profile: 'ProfileTab',
+  Login: 'AuthTab',
 };
 
-const sharedTabOptions = {
-  tabBarStyle: styles.tabBar,
-  tabBarActiveTintColor: '#b91c1c',
-  tabBarInactiveTintColor: '#9ca3af',
-  tabBarLabelStyle: styles.tabLabel,
-};
+function GuestNavigatorInner() {
+  const { pendingNavigation, clearPendingNavigation } = useDrawer();
+  const navigation = useNavigation<any>();
 
-function GuestNavigator() {
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    if (HOME_STACK_SCREENS[pendingNavigation]) {
+      try { navigation.navigate('HomeTab'); } catch {}
+      return;
+    }
+    const tabName = TAB_SCREEN_MAP[pendingNavigation];
+    if (tabName) {
+      clearPendingNavigation();
+      try { navigation.navigate(tabName); } catch {}
+    }
+  }, [pendingNavigation, clearPendingNavigation, navigation]);
+
   return (
     <GuestTab.Navigator
       screenOptions={({ route }) => ({
@@ -183,9 +254,7 @@ function GuestNavigator() {
         options={{
           title: 'Bildirimler',
           headerShown: true,
-          headerStyle: { backgroundColor: '#b91c1c' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
+          ...sharedHeaderOptions,
         }}
       >
         {() => <NotificationsScreen navigation={undefined} />}
@@ -195,7 +264,23 @@ function GuestNavigator() {
   );
 }
 
-function MemberNavigator() {
+function MemberNavigatorInner() {
+  const { pendingNavigation, clearPendingNavigation } = useDrawer();
+  const navigation = useNavigation<any>();
+
+  useEffect(() => {
+    if (!pendingNavigation) return;
+    if (HOME_STACK_SCREENS[pendingNavigation]) {
+      try { navigation.navigate('HomeTab'); } catch {}
+      return;
+    }
+    const tabName = TAB_SCREEN_MAP[pendingNavigation];
+    if (tabName) {
+      clearPendingNavigation();
+      try { navigation.navigate(tabName); } catch {}
+    }
+  }, [pendingNavigation, clearPendingNavigation, navigation]);
+
   return (
     <MemberTab.Navigator
       screenOptions={({ route }) => ({
@@ -209,38 +294,20 @@ function MemberNavigator() {
       <MemberTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
       <MemberTab.Screen
         name="DuesTab"
-        options={{
-          title: 'Aidat',
-          headerShown: true,
-          headerStyle: { backgroundColor: '#b91c1c' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={{ title: 'Aidat', headerShown: true, ...sharedHeaderOptions }}
       >
         {() => <DuesScreen />}
       </MemberTab.Screen>
       <MemberTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
       <MemberTab.Screen
         name="NotificationsTab"
-        options={{
-          title: 'Bildirimler',
-          headerShown: true,
-          headerStyle: { backgroundColor: '#b91c1c' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={{ title: 'Bildirimler', headerShown: true, ...sharedHeaderOptions }}
       >
         {() => <NotificationsScreen navigation={undefined} />}
       </MemberTab.Screen>
       <MemberTab.Screen
         name="ProfileTab"
-        options={{
-          title: 'Profilim',
-          headerShown: true,
-          headerStyle: { backgroundColor: '#b91c1c' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
+        options={{ title: 'Profilim', headerShown: true, ...sharedHeaderOptions }}
       >
         {() => <ProfileScreen />}
       </MemberTab.Screen>
@@ -250,5 +317,11 @@ function MemberNavigator() {
 
 export default function MainNavigator() {
   const { user } = useAuth();
-  return user ? <MemberNavigator /> : <GuestNavigator />;
+
+  return (
+    <View style={{ flex: 1 }}>
+      {user ? <MemberNavigatorInner /> : <GuestNavigatorInner />}
+      <DrawerMenu />
+    </View>
+  );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { UserPlus, Mail, Lock, User, Phone, Briefcase, MapPin, Users, Clock, CheckCircle } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, Phone, Briefcase, MapPin, Users, Clock, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 type SignupStep = 'email' | 'verify' | 'details' | 'pending';
 
@@ -23,6 +23,7 @@ export function Signup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<SignupFormData>({
     email: '',
     password: '',
@@ -65,8 +66,8 @@ export function Signup() {
         throw new Error('E-posta ve şifre gereklidir');
       }
 
-      if (formData.password.length < 6) {
-        throw new Error('Şifre en az 6 karakter olmalıdır');
+      if (formData.password.length < 8) {
+        throw new Error('Şifre en az 8 karakter olmalıdır');
       }
 
       const { data, error: signUpError } = await supabase.auth.signUp({
@@ -498,16 +499,31 @@ export function Signup() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                placeholder="En az 6 karakter"
-                minLength={6}
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                placeholder="En az 8 karakter"
+                minLength={8}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Şifreniz en az 6 karakter olmalıdır</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Şifreniz en az 8 karakter olmalıdır
+              {formData.password.length > 0 && (
+                <span className={formData.password.length >= 8 ? ' text-emerald-600 font-semibold' : ' text-red-500 font-semibold'}>
+                  {' '}({formData.password.length}/8)
+                </span>
+              )}
+            </p>
           </div>
 
           <button

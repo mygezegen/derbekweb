@@ -1,10 +1,13 @@
-import { Home, Users, Bell, Calendar, DollarSign, Wallet, Image as ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut, Pill, Package, TrendingUp, Smartphone } from 'lucide-react';
+import { Home, Users, Bell, Calendar, DollarSign, Wallet, Image as ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut, Pill, Package, TrendingUp, Smartphone, ToggleLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useModuleConfig } from '../hooks/useModuleConfig';
 
 type MenuItem = {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   id: string;
+  adminOnly?: boolean;
+  alwaysVisible?: boolean;
 };
 
 const menuItems: MenuItem[] = [
@@ -21,11 +24,12 @@ const menuItems: MenuItem[] = [
   { icon: Phone, label: 'İletişim', id: 'contact' },
   { icon: FileText, label: 'Bildirimler', id: 'notifications' },
   { icon: Smartphone, label: 'Push Bildirimleri', id: 'push-notifications' },
-  { icon: Mail, label: 'E-posta Ayarları', id: 'email' },
-  { icon: MessageSquare, label: 'SMS Ayarları', id: 'sms' },
-  { icon: FileText, label: 'E-posta Şablonları', id: 'email-templates' },
-  { icon: BarChart3, label: 'Sayfa Ayarları', id: 'page-settings' },
-  { icon: Settings, label: 'Yönetim', id: 'management' },
+  { icon: Mail, label: 'E-posta Ayarları', id: 'email', adminOnly: true, alwaysVisible: true },
+  { icon: MessageSquare, label: 'SMS Ayarları', id: 'sms', adminOnly: true, alwaysVisible: true },
+  { icon: FileText, label: 'E-posta Şablonları', id: 'email-templates', adminOnly: true, alwaysVisible: true },
+  { icon: BarChart3, label: 'Sayfa Ayarları', id: 'page-settings', adminOnly: true, alwaysVisible: true },
+  { icon: ToggleLeft, label: 'Modül Yönetimi', id: 'module-config', adminOnly: true, alwaysVisible: true },
+  { icon: Settings, label: 'Yönetim', id: 'management', adminOnly: true, alwaysVisible: true },
 ];
 
 type SidebarProps = {
@@ -34,7 +38,14 @@ type SidebarProps = {
 };
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
-  const { signOut } = useAuth();
+  const { signOut, member } = useAuth();
+  const { isEnabled } = useModuleConfig();
+
+  const visibleItems = menuItems.filter(item => {
+    if (item.adminOnly && !member?.is_admin && !member?.is_root) return false;
+    if (item.alwaysVisible) return true;
+    return isEnabled(item.id);
+  });
 
   return (
     <div className="w-64 bg-red-700 text-white min-h-screen flex flex-col">
@@ -53,7 +64,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentPage === item.id;
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { LogIn, Mail, CreditCard, Smartphone, ArrowLeft, ShieldCheck } from 'lucide-react';
+import { LogIn, Mail, CreditCard, Smartphone, ArrowLeft, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { SMSPasswordReset } from '../components/SMSPasswordReset';
 
 interface LoginProps {
@@ -23,6 +23,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   const [showSmsReset, setShowSmsReset] = useState(false);
   const [smsPhone, setSmsPhone] = useState('');
   const [smsMaskedPhone, setSmsMaskedPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // TC + Phone login state
   const [tcPhoneStep, setTcPhoneStep] = useState<'form' | 'code'>('form');
@@ -522,14 +523,26 @@ export function Login({ onLoginSuccess }: LoginProps) {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Şifre</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all outline-none"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">En az 8 karakter</p>
           </div>
 
           <button

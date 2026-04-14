@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 type Props = {
@@ -23,6 +24,8 @@ export default function SignupScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
@@ -34,8 +37,8 @@ export default function SignupScreen({ navigation }: Props) {
       Alert.alert('Hata', 'Şifreler eşleşmiyor.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır.');
+    if (password.length < 8) {
+      Alert.alert('Hata', 'Şifre en az 8 karakter olmalıdır.');
       return;
     }
     setLoading(true);
@@ -86,26 +89,42 @@ export default function SignupScreen({ navigation }: Props) {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Şifre</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="En az 6 karakter"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-              />
+              <View style={styles.passwordBox}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="En az 8 karakter"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+              {password.length > 0 && password.length < 8 && (
+                <Text style={styles.hint}>En az 8 karakter gerekli ({password.length}/8)</Text>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Şifre Tekrar</Text>
-              <TextInput
-                style={styles.input}
-                value={confirm}
-                onChangeText={setConfirm}
-                placeholder="Şifrenizi tekrar girin"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-              />
+              <View style={styles.passwordBox}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={confirm}
+                  onChangeText={setConfirm}
+                  placeholder="Şifrenizi tekrar girin"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showConfirm}
+                />
+                <TouchableOpacity onPress={() => setShowConfirm(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+              {confirm.length > 0 && password !== confirm && (
+                <Text style={[styles.hint, { color: '#dc2626' }]}>Şifreler eşleşmiyor</Text>
+              )}
             </View>
 
             <TouchableOpacity
@@ -165,6 +184,23 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#f9fafb',
   },
+  passwordBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 12 },
+  hint: { fontSize: 12, color: '#d97706', marginTop: 4, fontWeight: '500' },
   signupBtn: {
     backgroundColor: '#b91c1c',
     borderRadius: 12,

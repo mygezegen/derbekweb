@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 type Props = {
@@ -22,6 +23,7 @@ export default function LoginScreen({ navigation }: Props) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
@@ -71,14 +73,19 @@ export default function LoginScreen({ navigation }: Props) {
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Şifre</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor="#9ca3af"
-                secureTextEntry
-              />
+              <View style={styles.passwordBox}>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <TouchableOpacity
@@ -155,6 +162,22 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#f9fafb',
   },
+  passwordBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    borderRadius: 12,
+    backgroundColor: '#f9fafb',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  eyeBtn: { paddingHorizontal: 14, paddingVertical: 12 },
   forgotBtn: { alignSelf: 'flex-end', marginBottom: 20, marginTop: 4 },
   forgotText: { fontSize: 13, color: '#b91c1c', fontWeight: '500' },
   loginBtn: {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Globe, Search, Share2, Twitter, Smartphone, BarChart2, Code, Save, RefreshCw, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Share2, Twitter, Smartphone, BarChart2, Code, Save, RefreshCw, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface SEOData {
   id: string;
@@ -61,6 +61,63 @@ const defaultData: Omit<SEOData, 'id'> = {
 
 type SectionKey = 'general' | 'opengraph' | 'twitter' | 'pwa' | 'analytics' | 'advanced';
 
+const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all";
+const textareaClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none";
+const labelClass = "block text-sm font-medium text-gray-700 mb-1";
+const hintClass = "text-xs text-gray-400 mt-1";
+
+function CharCount({ val, max }: { val: string; max: number }) {
+  return (
+    <span className={`text-xs ${val.length > max ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+      {val.length}/{max}
+    </span>
+  );
+}
+
+function Section({
+  id,
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+  open,
+  onToggle,
+}: {
+  id: SectionKey;
+  icon: React.ElementType;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+  open: boolean;
+  onToggle: (id: SectionKey) => void;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onToggle(id)}
+        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <Icon size={18} className="text-blue-600" />
+          </div>
+          <div className="text-left">
+            <div className="font-semibold text-gray-800 text-sm">{title}</div>
+            <div className="text-xs text-gray-500">{subtitle}</div>
+          </div>
+        </div>
+        {open ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-gray-100">
+          <div className="pt-4 space-y-4">{children}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SEOSettings() {
   const [data, setData] = useState<SEOData | null>(null);
   const [edited, setEdited] = useState<Omit<SEOData, 'id'>>(defaultData);
@@ -110,23 +167,16 @@ export function SEOSettings() {
     setSaving(true);
     setError(null);
     try {
-      if (data?.id) {
-        const { error: err } = await supabase
-          .from('seo_settings')
-          .update({ ...edited, updated_at: new Date().toISOString() })
-          .eq('id', data.id);
-        if (err) throw err;
-      } else {
-        const { error: err } = await supabase
-          .from('seo_settings')
-          .insert({ ...edited, singleton_key: 'main' });
-        if (err) throw err;
-      }
+      const payload = { ...edited, singleton_key: 'main' };
+      const { error: err } = await supabase
+        .from('seo_settings')
+        .upsert(payload, { onConflict: 'singleton_key' });
+      if (err) throw err;
       setSaved(true);
       await loadSettings();
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message || JSON.stringify(e));
     } finally {
       setSaving(false);
     }
@@ -143,55 +193,6 @@ export function SEOSettings() {
       </div>
     );
   }
-
-  const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all";
-  const textareaClass = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none";
-  const labelClass = "block text-sm font-medium text-gray-700 mb-1";
-  const hintClass = "text-xs text-gray-400 mt-1";
-
-  const Section = ({
-    id,
-    icon: Icon,
-    title,
-    subtitle,
-    children,
-  }: {
-    id: SectionKey;
-    icon: React.ElementType;
-    title: string;
-    subtitle: string;
-    children: React.ReactNode;
-  }) => (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <button
-        type="button"
-        onClick={() => toggleSection(id)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-            <Icon size={18} className="text-blue-600" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-gray-800 text-sm">{title}</div>
-            <div className="text-xs text-gray-500">{subtitle}</div>
-          </div>
-        </div>
-        {openSections[id] ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-      </button>
-      {openSections[id] && (
-        <div className="px-5 pb-5 border-t border-gray-100">
-          <div className="pt-4 space-y-4">{children}</div>
-        </div>
-      )}
-    </div>
-  );
-
-  const charCount = (val: string, max: number) => (
-    <span className={`text-xs ${val.length > max ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
-      {val.length}/{max}
-    </span>
-  );
 
   return (
     <div className="space-y-5">
@@ -237,11 +238,11 @@ export function SEOSettings() {
         <strong>Not:</strong> Bu ayarlar statik HTML sayfasında (<code className="bg-amber-100 px-1 rounded text-xs">index.html</code>) meta etiketlerini kontrol eder. Ayarlar kaydedildikten sonra sayfanın yeniden oluşturulması (build) gerekebilir. Dinamik yükleme için JavaScript injection kullanılmaktadır.
       </div>
 
-      <Section id="general" icon={Search} title="Genel SEO" subtitle="Sayfa başlığı, açıklama ve anahtar kelimeler">
+      <Section id="general" icon={Search} title="Genel SEO" subtitle="Sayfa başlığı, açıklama ve anahtar kelimeler" open={openSections.general} onToggle={toggleSection}>
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className={labelClass}>Site Başlığı (title)</label>
-            {charCount(edited.site_title, 60)}
+            <CharCount val={edited.site_title} max={60} />
           </div>
           <input
             type="text"
@@ -256,7 +257,7 @@ export function SEOSettings() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className={labelClass}>Meta Açıklama (description)</label>
-            {charCount(edited.site_description, 160)}
+            <CharCount val={edited.site_description} max={160} />
           </div>
           <textarea
             className={textareaClass}
@@ -342,11 +343,11 @@ export function SEOSettings() {
         </div>
       </Section>
 
-      <Section id="opengraph" icon={Share2} title="Open Graph (Facebook / LinkedIn)" subtitle="Sosyal medyada paylaşım önizlemesi">
+      <Section id="opengraph" icon={Share2} title="Open Graph (Facebook / LinkedIn)" subtitle="Sosyal medyada paylaşım önizlemesi" open={openSections.opengraph} onToggle={toggleSection}>
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className={labelClass}>OG Başlık</label>
-            {charCount(edited.og_title, 60)}
+            <CharCount val={edited.og_title} max={60} />
           </div>
           <input
             type="text"
@@ -360,7 +361,7 @@ export function SEOSettings() {
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className={labelClass}>OG Açıklama</label>
-            {charCount(edited.og_description, 200)}
+            <CharCount val={edited.og_description} max={200} />
           </div>
           <textarea
             className={textareaClass}
@@ -409,7 +410,7 @@ export function SEOSettings() {
         </div>
       </Section>
 
-      <Section id="twitter" icon={Twitter} title="Twitter / X Kartı" subtitle="Twitter'da paylaşım görünümü">
+      <Section id="twitter" icon={Twitter} title="Twitter / X Kartı" subtitle="Twitter'da paylaşım görünümü" open={openSections.twitter} onToggle={toggleSection}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Twitter Kart Türü</label>
@@ -468,7 +469,7 @@ export function SEOSettings() {
         </div>
       </Section>
 
-      <Section id="pwa" icon={Smartphone} title="PWA (Progressive Web App)" subtitle="Mobil uygulama kurulum bilgileri">
+      <Section id="pwa" icon={Smartphone} title="PWA (Progressive Web App)" subtitle="Mobil uygulama kurulum bilgileri" open={openSections.pwa} onToggle={toggleSection}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Uygulama Adı</label>
@@ -529,7 +530,7 @@ export function SEOSettings() {
         </div>
       </Section>
 
-      <Section id="analytics" icon={BarChart2} title="Analytics ve Doğrulama" subtitle="Google Analytics ve arama motoru doğrulama">
+      <Section id="analytics" icon={BarChart2} title="Analytics ve Doğrulama" subtitle="Google Analytics ve arama motoru doğrulama" open={openSections.analytics} onToggle={toggleSection}>
         <div>
           <label className={labelClass}>Google Analytics ID</label>
           <input
@@ -543,7 +544,7 @@ export function SEOSettings() {
         </div>
       </Section>
 
-      <Section id="advanced" icon={Code} title="Gelişmiş Ayarlar" subtitle="JSON-LD yapısal veri ve özel meta etiketler">
+      <Section id="advanced" icon={Code} title="Gelişmiş Ayarlar" subtitle="JSON-LD yapısal veri ve özel meta etiketler" open={openSections.advanced} onToggle={toggleSection}>
         <div>
           <label className={labelClass}>JSON-LD Yapısal Veri</label>
           <textarea

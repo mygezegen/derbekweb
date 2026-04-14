@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search, Smartphone } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search, Smartphone, ToggleLeft } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -28,6 +28,7 @@ import { InventoryManagement } from '../components/inventory/InventoryManagement
 import { SocialMediaMonitor } from '../components/social-monitor/SocialMediaMonitor';
 import { MemberQueryManagement } from '../components/member-query/MemberQueryManagement';
 import { SEOSettings } from '../components/SEOSettings';
+import ModuleConfigPanel from '../components/ModuleConfigPanel';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -36,7 +37,7 @@ interface DashboardProps {
 export function Dashboard({ onLogout }: DashboardProps) {
   const navigate = useNavigate();
   const [currentMember, setCurrentMember] = useState<Member | null>(null);
-  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'push-notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory' | 'social-monitor' | 'member-query' | 'seo'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'members' | 'announcements' | 'events' | 'dues' | 'treasury' | 'gallery' | 'pharmacy' | 'contact' | 'notifications' | 'push-notifications' | 'bulk' | 'admin' | 'settings' | 'smtp' | 'sms' | 'board' | 'email-templates' | 'qr-scanner' | 'surveys' | 'inventory' | 'social-monitor' | 'member-query' | 'seo' | 'module-config' | 'management' | 'page-settings'>('home');
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -204,12 +205,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
       { id: 'sms', label: 'SMS Ayarları', icon: MessageSquare, pageKey: 'sms' },
       { id: 'email-templates', label: 'E-posta Şablonları', icon: FileText, pageKey: 'email-templates' },
       { id: 'settings', label: 'Sayfa Ayarları', icon: Sliders, pageKey: 'settings' },
-      { id: 'seo', label: 'SEO Ayarları', icon: Search, pageKey: 'seo' }
+      { id: 'seo', label: 'SEO Ayarları', icon: Search, pageKey: 'seo' },
+      { id: 'module-config', label: 'Modül Yönetimi', icon: ToggleLeft, pageKey: 'module-config' }
     ] : []),
   ];
 
   const tabs = allTabs.filter(tab => {
-    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'push-notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory' || tab.pageKey === 'social-monitor' || tab.pageKey === 'member-query' || tab.pageKey === 'seo') return true;
+    if (tab.pageKey === 'settings' || tab.pageKey === 'smtp' || tab.pageKey === 'sms' || tab.pageKey === 'board' || tab.pageKey === 'email-templates' || tab.pageKey === 'treasury' || tab.pageKey === 'notifications' || tab.pageKey === 'push-notifications' || tab.pageKey === 'qr-scanner' || tab.pageKey === 'surveys' || tab.pageKey === 'inventory' || tab.pageKey === 'social-monitor' || tab.pageKey === 'member-query' || tab.pageKey === 'seo' || tab.pageKey === 'module-config') return true;
     return isPageVisible(tab.pageKey);
   });
 
@@ -555,6 +557,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         {activeTab === 'seo' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
           <SEOSettings />
+        )}
+
+        {activeTab === 'module-config' && currentMember && (currentMember.is_admin || currentMember.is_root) && (
+          <ModuleConfigPanel />
         )}
           </div>
         </main>

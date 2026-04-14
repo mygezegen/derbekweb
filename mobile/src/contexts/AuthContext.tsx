@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
@@ -22,18 +22,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadMember = async (userId: string) => {
+  const loadMember = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from('members')
       .select('*')
       .eq('auth_id', userId)
       .maybeSingle();
     setMember(data);
-  };
+  }, []);
 
-  const refreshMember = async () => {
+  const refreshMember = useCallback(async () => {
     if (user) await loadMember(user.id);
-  };
+  }, [user, loadMember]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
@@ -76,7 +76,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadMember]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`member-profile-${user.id}`)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: '*',
+          schema: 'public',
+          table: 'members',
+          filter: `auth_id=eq.${user.id}`,
+        },
+        () => {
+          loadMember(user.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, loadMember]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
