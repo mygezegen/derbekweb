@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useDrawer } from '../contexts/DrawerContext';
 
@@ -30,19 +31,6 @@ import DuesAdminScreen from '../screens/main/DuesAdminScreen';
 import DrawerMenu from '../components/DrawerMenu';
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: '#fff',
-    borderTopColor: '#f3f4f6',
-    borderTopWidth: 1,
-    height: 60,
-    paddingBottom: 8,
-    paddingTop: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-  },
   tabLabel: { fontSize: 11, fontWeight: '600' },
   menuBtn: {
     marginLeft: 16,
@@ -54,6 +42,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+function useTabBarStyle() {
+  const insets = useSafeAreaInsets();
+  return {
+    backgroundColor: '#fff',
+    borderTopColor: '#f3f4f6',
+    borderTopWidth: 1,
+    height: 60 + insets.bottom,
+    paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+    paddingTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  };
+}
 
 function MenuButton() {
   const { openDrawer } = useDrawer();
@@ -71,8 +76,7 @@ const sharedHeaderOptions = {
   headerLeft: () => <MenuButton />,
 };
 
-const sharedTabOptions = {
-  tabBarStyle: styles.tabBar,
+const sharedTabTintOptions = {
   tabBarActiveTintColor: '#b91c1c',
   tabBarInactiveTintColor: '#9ca3af',
   tabBarLabelStyle: styles.tabLabel,
@@ -223,6 +227,7 @@ const TAB_SCREEN_MAP: Record<string, string> = {
 function GuestNavigatorInner() {
   const { pendingNavigation, clearPendingNavigation } = useDrawer();
   const navigation = useNavigation<any>();
+  const tabBarStyle = useTabBarStyle();
 
   useEffect(() => {
     if (!pendingNavigation) return;
@@ -241,7 +246,8 @@ function GuestNavigatorInner() {
     <GuestTab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        ...sharedTabOptions,
+        ...sharedTabTintOptions,
+        tabBarStyle,
         tabBarIcon: ({ focused, color, size }) => tabBarIcon(route.name, focused, color, size),
       })}
     >
@@ -267,6 +273,7 @@ function GuestNavigatorInner() {
 function MemberNavigatorInner() {
   const { pendingNavigation, clearPendingNavigation } = useDrawer();
   const navigation = useNavigation<any>();
+  const tabBarStyle = useTabBarStyle();
 
   useEffect(() => {
     if (!pendingNavigation) return;
@@ -285,7 +292,8 @@ function MemberNavigatorInner() {
     <MemberTab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        ...sharedTabOptions,
+        ...sharedTabTintOptions,
+        tabBarStyle,
         tabBarIcon: ({ focused, color, size }) => tabBarIcon(route.name, focused, color, size),
       })}
     >

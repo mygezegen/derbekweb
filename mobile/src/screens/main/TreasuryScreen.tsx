@@ -18,17 +18,24 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
+type Category = {
+  id: string;
+  name: string;
+  type: 'income' | 'expense';
+};
+
 type Transaction = {
   id: string;
   transaction_date: string;
-  transaction_type: 'income' | 'expense';
-  category: string;
+  type: 'income' | 'expense';
+  category_id: string;
   description: string;
   amount: number;
   payment_method?: string;
   reference_number?: string;
   member_id?: string;
   members?: { full_name: string };
+  transaction_categories?: { name: string; type: string };
   created_at: string;
 };
 
@@ -45,15 +52,11 @@ const PAYMENT_METHODS: Record<string, string> = {
   other: 'Diğer',
 };
 
-const CATEGORIES = [
-  'Aidat', 'Bağış', 'Etkinlik Geliri', 'Diğer Gelir',
-  'Kira', 'Fatura', 'Malzeme', 'Etkinlik Gideri', 'Personel', 'Diğer Gider',
-];
-
 export default function TreasuryScreen() {
   const { member } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filtered, setFiltered] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [summary, setSummary] = useState<Summary>({ income: 0, expense: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,8 +66,8 @@ export default function TreasuryScreen() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    transaction_type: 'income' as 'income' | 'expense',
-    category: '',
+    type: 'income' as 'income' | 'expense',
+    category_id: '',
     description: '',
     amount: '',
     payment_method: 'cash',
@@ -74,18 +77,35 @@ export default function TreasuryScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from('transactions')
-        .select('*, members(full_name)')
-        .order('transaction_date', { ascending: false })
-        .limit(200);
+      const [txRes, catRes, summaryRes] = await Promise.all([
+        supabase
+          .from('transactions')
+          .select('*, transaction_categories(name, type), members!transactions_member_id_fkey(full_name)')
+          .order('transaction_date', { ascending: false })
+          .limit(200),
+        supabase
+          .from('transaction_categories')
+          .select('id, name, type')
+          .eq('is_active', true)
+          .order('name'),
+        supabase.from('treasury_summary').select('*').maybeSingle(),
+      ]);
 
-      const list = (data || []) as Transaction[];
+      const list = (txRes.data || []) as Transaction[];
       setTransactions(list);
+      setCategories((catRes.data || []) as Category[]);
 
-      const inc = list.filter(t => t.transaction_type === 'income').reduce((s, t) => s + t.amount, 0);
-      const exp = list.filter(t => t.transaction_type === 'expense').reduce((s, t) => s + t.amount, 0);
-      setSummary({ income: inc, expense: exp, balance: inc - exp });
+      if (summaryRes.data) {
+        setSummary({
+          income: summaryRes.data.total_income || 0,
+          expense: summaryRes.data.total_expense || 0,
+          balance: summaryRes.data.current_balance || 0,
+        });
+      } else {
+        const inc = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+        const exp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+        setSummary({ income: inc, expense: exp, balance: inc - exp });
+      }
     } catch {
     } finally {
       setLoading(false);
@@ -97,20 +117,22 @@ export default function TreasuryScreen() {
 
   useEffect(() => {
     let list = transactions;
-    if (typeFilter !== 'all') list = list.filter(t => t.transaction_type === typeFilter);
+    if (typeFilter !== 'all') list = list.filter(t => t.type === typeFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(t =>
         t.description?.toLowerCase().includes(q) ||
-        t.category?.toLowerCase().includes(q) ||
+        t.transaction_categories?.name?.toLowerCase().includes(q) ||
         t.members?.full_name?.toLowerCase().includes(q)
       );
     }
     setFiltered(list);
   }, [transactions, typeFilter, search]);
 
+  const filteredCategories = categories.filter(c => c.type === form.type);
+
   const handleSave = async () => {
-    if (!form.category || !form.description || !form.amount) {
+    if (!form.category_id || !form.description || !form.amount) {
       Alert.alert('Hata', 'Kategori, açıklama ve tutar zorunludur.');
       return;
     }
@@ -122,20 +144,20 @@ export default function TreasuryScreen() {
     setSaving(true);
     try {
       const { error } = await supabase.from('transactions').insert({
-        transaction_type: form.transaction_type,
-        category: form.category,
+        type: form.type,
+        category_id: form.category_id,
         description: form.description,
         amount,
         payment_method: form.payment_method,
-        transaction_date: form.transaction_date,
+        transaction_date: new Date(form.transaction_date).toISOString(),
         reference_number: form.reference_number || null,
         created_by: member?.id,
       });
       if (error) throw error;
       setModalVisible(false);
       setForm({
-        transaction_type: 'income',
-        category: '',
+        type: 'income',
+        category_id: '',
         description: '',
         amount: '',
         payment_method: 'cash',
@@ -165,7 +187,7 @@ export default function TreasuryScreen() {
   };
 
   const formatAmount = (amount: number) =>
-    amount.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
+    Number(amount).toLocaleString('tr-TR', { minimumFractionDigits: 2 }) + ' ₺';
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -255,21 +277,21 @@ export default function TreasuryScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.txCard}>
-            <View style={[styles.txTypeBadge, { backgroundColor: item.transaction_type === 'income' ? '#dcfce7' : '#fee2e2' }]}>
+            <View style={[styles.txTypeBadge, { backgroundColor: item.type === 'income' ? '#dcfce7' : '#fee2e2' }]}>
               <Ionicons
-                name={item.transaction_type === 'income' ? 'arrow-down' : 'arrow-up'}
+                name={item.type === 'income' ? 'arrow-down' : 'arrow-up'}
                 size={16}
-                color={item.transaction_type === 'income' ? '#16a34a' : '#dc2626'}
+                color={item.type === 'income' ? '#16a34a' : '#dc2626'}
               />
             </View>
             <View style={styles.txInfo}>
               <View style={styles.txHeader}>
                 <Text style={styles.txDesc} numberOfLines={1}>{item.description}</Text>
-                <Text style={[styles.txAmount, { color: item.transaction_type === 'income' ? '#16a34a' : '#dc2626' }]}>
-                  {item.transaction_type === 'income' ? '+' : '-'}{formatAmount(item.amount)}
+                <Text style={[styles.txAmount, { color: item.type === 'income' ? '#16a34a' : '#dc2626' }]}>
+                  {item.type === 'income' ? '+' : '-'}{formatAmount(Number(item.amount))}
                 </Text>
               </View>
-              <Text style={styles.txCategory}>{item.category}</Text>
+              <Text style={styles.txCategory}>{item.transaction_categories?.name || '-'}</Text>
               <View style={styles.txMeta}>
                 <Text style={styles.txDate}>{formatDate(item.transaction_date)}</Text>
                 {item.payment_method && (
@@ -302,37 +324,30 @@ export default function TreasuryScreen() {
             <ScrollView showsVerticalScrollIndicator={false}>
               <View style={styles.typeToggle}>
                 <TouchableOpacity
-                  style={[styles.typeBtn, form.transaction_type === 'income' && styles.typeBtnIncomeActive]}
-                  onPress={() => setForm(f => ({ ...f, transaction_type: 'income' }))}
+                  style={[styles.typeBtn, form.type === 'income' && styles.typeBtnIncomeActive]}
+                  onPress={() => setForm(f => ({ ...f, type: 'income', category_id: '' }))}
                 >
-                  <Ionicons name="trending-up" size={18} color={form.transaction_type === 'income' ? '#fff' : '#16a34a'} />
-                  <Text style={[styles.typeBtnText, form.transaction_type === 'income' && { color: '#fff' }]}>Gelir</Text>
+                  <Ionicons name="trending-up" size={18} color={form.type === 'income' ? '#fff' : '#16a34a'} />
+                  <Text style={[styles.typeBtnText, form.type === 'income' && { color: '#fff' }]}>Gelir</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.typeBtn, form.transaction_type === 'expense' && styles.typeBtnExpenseActive]}
-                  onPress={() => setForm(f => ({ ...f, transaction_type: 'expense' }))}
+                  style={[styles.typeBtn, form.type === 'expense' && styles.typeBtnExpenseActive]}
+                  onPress={() => setForm(f => ({ ...f, type: 'expense', category_id: '' }))}
                 >
-                  <Ionicons name="trending-down" size={18} color={form.transaction_type === 'expense' ? '#fff' : '#dc2626'} />
-                  <Text style={[styles.typeBtnText, form.transaction_type === 'expense' && { color: '#fff' }]}>Gider</Text>
+                  <Ionicons name="trending-down" size={18} color={form.type === 'expense' ? '#fff' : '#dc2626'} />
+                  <Text style={[styles.typeBtnText, form.type === 'expense' && { color: '#fff' }]}>Gider</Text>
                 </TouchableOpacity>
               </View>
 
-              <FormField
-                label="Kategori"
-                value={form.category}
-                onChangeText={v => setForm(f => ({ ...f, category: v }))}
-                placeholder="Örn: Aidat, Kira..."
-              />
-
-              <Text style={styles.fieldLabel}>Kategori Seç</Text>
+              <Text style={styles.fieldLabel}>Kategori *</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-                {CATEGORIES.map(cat => (
+                {filteredCategories.map(cat => (
                   <TouchableOpacity
-                    key={cat}
-                    style={[styles.catChip, form.category === cat && styles.catChipActive]}
-                    onPress={() => setForm(f => ({ ...f, category: cat }))}
+                    key={cat.id}
+                    style={[styles.catChip, form.category_id === cat.id && styles.catChipActive]}
+                    onPress={() => setForm(f => ({ ...f, category_id: cat.id }))}
                   >
-                    <Text style={[styles.catChipText, form.category === cat && styles.catChipTextActive]}>{cat}</Text>
+                    <Text style={[styles.catChipText, form.category_id === cat.id && styles.catChipTextActive]}>{cat.name}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -403,7 +418,7 @@ function SummaryCard({ label, amount, color, icon }: { label: string; amount: nu
     <View style={[summaryStyles.card, { borderTopColor: color }]}>
       <Ionicons name={icon} size={20} color={color} />
       <Text style={[summaryStyles.amount, { color }]}>
-        {amount.toLocaleString('tr-TR', { minimumFractionDigits: 0 })} ₺
+        {Number(amount).toLocaleString('tr-TR', { minimumFractionDigits: 0 })} ₺
       </Text>
       <Text style={summaryStyles.label}>{label}</Text>
     </View>

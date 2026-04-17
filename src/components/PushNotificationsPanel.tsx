@@ -14,6 +14,8 @@ import {
   ChevronUp,
   UserCheck,
   UserX,
+  List,
+  Trash2,
 } from 'lucide-react';
 import { MemberSelectionModal } from './MemberSelectionModal';
 
@@ -30,6 +32,19 @@ interface PushNotification {
   sent_by_member?: { full_name: string };
 }
 
+interface DeviceToken {
+  id: string;
+  token: string;
+  platform: string;
+  is_active: boolean;
+  is_guest: boolean;
+  device_name: string | null;
+  last_seen_at: string | null;
+  created_at: string;
+  member_id: string | null;
+  member?: { full_name: string; email: string } | null;
+}
+
 interface DeviceTokenStats {
   total: number;
   ios: number;
@@ -38,9 +53,13 @@ interface DeviceTokenStats {
   guests: number;
 }
 
+type Tab = 'send' | 'devices' | 'history';
+
 export function PushNotificationsPanel() {
+  const [activeTab, setActiveTab] = useState<Tab>('send');
   const [members, setMembers] = useState<Member[]>([]);
   const [history, setHistory] = useState<PushNotification[]>([]);
+  const [devices, setDevices] = useState<DeviceToken[]>([]);
   const [tokenStats, setTokenStats] = useState<DeviceTokenStats>({ total: 0, ios: 0, android: 0, members: 0, guests: 0 });
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -52,6 +71,7 @@ export function PushNotificationsPanel() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deviceFilter, setDeviceFilter] = useState<'all' | 'member' | 'guest'>('all');
 
   useEffect(() => {
     loadData();
@@ -59,7 +79,7 @@ export function PushNotificationsPanel() {
 
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([loadMembers(), loadHistory(), loadTokenStats()]);
+    await Promise.all([loadMembers(), loadHistory(), loadTokenStats(), loadDevices()]);
     setLoading(false);
   };
 
@@ -81,6 +101,15 @@ export function PushNotificationsPanel() {
     setHistory((data as PushNotification[]) || []);
   };
 
+  const loadDevices = async () => {
+    const { data } = await supabase
+      .from('device_tokens')
+      .select('*, member:member_id(full_name, email)')
+      .order('last_seen_at', { ascending: false });
+
+    setDevices((data as DeviceToken[]) || []);
+  };
+
   const loadTokenStats = async () => {
     const { data } = await supabase
       .from('device_tokens')
@@ -96,6 +125,15 @@ export function PushNotificationsPanel() {
         guests: data.filter((t) => t.member_id === null || t.is_guest).length,
       });
     }
+  };
+
+  const handleDeactivateDevice = async (deviceId: string) => {
+    await supabase
+      .from('device_tokens')
+      .update({ is_active: false })
+      .eq('id', deviceId);
+    await loadDevices();
+    await loadTokenStats();
   };
 
   const handleSend = async () => {
@@ -194,10 +232,34 @@ export function PushNotificationsPanel() {
     );
   };
 
+  const getPlatformBadge = (platform: string) => {
+    const isIos = platform === 'ios';
+    return (
+      <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+        isIos ? 'bg-gray-100 text-gray-700' : 'bg-green-50 text-green-700'
+      }`}>
+        <Smartphone size={11} />
+        {isIos ? 'iOS' : 'Android'}
+      </span>
+    );
+  };
+
+  const filteredDevices = devices.filter(d => {
+    if (deviceFilter === 'member') return d.member_id !== null && !d.is_guest;
+    if (deviceFilter === 'guest') return d.member_id === null || d.is_guest;
+    return true;
+  });
+
   const selectedNames = members
     .filter((m) => selectedMemberIds.includes(m.id))
     .map((m) => m.full_name)
     .join(', ');
+
+  const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { id: 'send', label: 'Bildirim Gonder', icon: <Bell size={15} /> },
+    { id: 'devices', label: 'Cihazlar', icon: <List size={15} />, count: tokenStats.total },
+    { id: 'history', label: 'Gecmis', icon: <Clock size={15} />, count: history.length },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -232,7 +294,7 @@ export function PushNotificationsPanel() {
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{tokenStats.members}</p>
-            <p className="text-xs text-gray-500">Üye Cihazı</p>
+            <p className="text-xs text-gray-500">Uye Cihazi</p>
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
@@ -241,7 +303,7 @@ export function PushNotificationsPanel() {
           </div>
           <div>
             <p className="text-2xl font-bold text-gray-900">{tokenStats.guests}</p>
-            <p className="text-xs text-gray-500">Misafir Cihazı</p>
+            <p className="text-xs text-gray-500">Misafir Cihazi</p>
           </div>
         </div>
         <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-3">
@@ -264,9 +326,36 @@ export function PushNotificationsPanel() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Bildirim gonderme formu */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
+      {/* Sekmeler */}
+      <div className="border-b border-gray-200">
+        <nav className="flex gap-1">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? 'border-red-600 text-red-600 bg-red-50/50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+              {tab.count !== undefined && (
+                <span className={`text-xs rounded-full px-1.5 py-0.5 font-semibold ${
+                  activeTab === tab.id ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+      </div>
+
+      {/* Bildirim Gonderme */}
+      {activeTab === 'send' && (
+        <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 max-w-lg">
           <h3 className="font-semibold text-gray-900 flex items-center gap-2">
             <Bell size={17} className="text-red-600" />
             Yeni Bildirim Gonder
@@ -378,35 +467,147 @@ export function PushNotificationsPanel() {
             )}
           </button>
         </div>
+      )}
 
-        {/* Gecmis */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Clock size={17} className="text-gray-500" />
-            Gonderim Gecmisi
-          </h3>
+      {/* Cihaz Listesi */}
+      {activeTab === 'devices' && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-4">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Smartphone size={17} className="text-blue-600" />
+              Kayitli Cihazlar
+              <span className="text-xs text-gray-500 font-normal">({filteredDevices.length})</span>
+            </h3>
+            <div className="flex gap-1">
+              {(['all', 'member', 'guest'] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setDeviceFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    deviceFilter === f
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f === 'all' ? 'Tumu' : f === 'member' ? 'Uyeler' : 'Misafirler'}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {loading ? (
-            <div className="flex justify-center py-8">
+            <div className="flex justify-center py-12">
+              <RefreshCw size={20} className="animate-spin text-gray-400" />
+            </div>
+          ) : filteredDevices.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Smartphone size={36} className="mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Kayitli cihaz bulunamadi</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {filteredDevices.map((device) => {
+                const isMember = device.member_id !== null && !device.is_guest;
+                const lastSeen = device.last_seen_at
+                  ? new Date(device.last_seen_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : '-';
+                const createdAt = new Date(device.created_at).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+                return (
+                  <div key={device.id} className={`px-5 py-4 flex items-start gap-4 hover:bg-gray-50/50 transition-colors ${!device.is_active ? 'opacity-50' : ''}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      isMember ? 'bg-emerald-50' : 'bg-amber-50'
+                    }`}>
+                      {isMember
+                        ? <UserCheck size={20} className="text-emerald-600" />
+                        : <UserX size={20} className="text-amber-600" />
+                      }
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {device.device_name || (device.platform === 'ios' ? 'iPhone/iPad' : 'Android Cihaz')}
+                        </span>
+                        {getPlatformBadge(device.platform)}
+                        {isMember ? (
+                          <span className="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Uye</span>
+                        ) : (
+                          <span className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">Misafir</span>
+                        )}
+                        {!device.is_active && (
+                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Pasif</span>
+                        )}
+                      </div>
+
+                      {isMember && device.member && (
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          <span className="font-medium">{(device.member as any).full_name}</span>
+                          {' '}
+                          <span className="text-gray-400">{(device.member as any).email}</span>
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                        <span>Son aktif: {lastSeen}</span>
+                        <span>Kayit: {createdAt}</span>
+                      </div>
+
+                      <p className="text-xs text-gray-300 mt-0.5 font-mono truncate max-w-xs">{device.token}</p>
+                    </div>
+
+                    {device.is_active && (
+                      <button
+                        onClick={() => handleDeactivateDevice(device.id)}
+                        className="flex-shrink-0 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Cihazi pasife al"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Gecmis */}
+      {activeTab === 'history' && (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Clock size={17} className="text-gray-500" />
+              Gonderim Gecmisi
+            </h3>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
               <RefreshCw size={20} className="animate-spin text-gray-400" />
             </div>
           ) : history.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-12 text-gray-400">
               <Bell size={32} className="mx-auto mb-2 opacity-40" />
               <p className="text-sm">Henuz bildirim gonderilmedi</p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+            <div className="divide-y divide-gray-100">
               {history.map((notif) => (
-                <div key={notif.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                <div key={notif.id} className="overflow-hidden">
                   <button
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
+                    className="w-full text-left px-5 py-4 hover:bg-gray-50 transition-colors"
                     onClick={() => setExpandedId(expandedId === notif.id ? null : notif.id)}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 truncate">{notif.title}</p>
                         <p className="text-xs text-gray-500 truncate mt-0.5">{notif.body}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(notif.created_at).toLocaleString('tr-TR')}
+                          {notif.sent_by_member && ` · ${notif.sent_by_member.full_name}`}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {getStatusBadge(notif.status)}
@@ -416,8 +617,8 @@ export function PushNotificationsPanel() {
                   </button>
 
                   {expandedId === notif.id && (
-                    <div className="px-4 pb-3 border-t border-gray-100 bg-gray-50 space-y-1.5">
-                      <div className="flex justify-between text-xs text-gray-600 pt-2">
+                    <div className="px-5 pb-4 border-t border-gray-100 bg-gray-50 space-y-1.5 pt-3">
+                      <div className="flex justify-between text-xs text-gray-600">
                         <span>Alici:</span>
                         <span className="font-medium">{notif.recipient_type === 'all' ? 'Tum Kullanicilar' : 'Secili Uyeler'}</span>
                       </div>
@@ -442,7 +643,7 @@ export function PushNotificationsPanel() {
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {showMemberSelection && (
         <MemberSelectionModal

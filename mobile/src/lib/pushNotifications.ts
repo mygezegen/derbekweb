@@ -11,6 +11,18 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function getDeviceName(): string {
+  const brand = Device.brand || '';
+  const modelName = Device.modelName || '';
+  const osName = Device.osName || Platform.OS;
+  const osVersion = Device.osVersion || '';
+
+  if (brand && modelName) return `${brand} ${modelName}`;
+  if (modelName) return modelName;
+  if (osName) return `${osName} ${osVersion}`.trim();
+  return Platform.OS === 'ios' ? 'iPhone/iPad' : 'Android Cihaz';
+}
+
 async function requestAndGetToken(): Promise<string | null> {
   if (!Device.isDevice) return null;
 
@@ -29,7 +41,7 @@ async function requestAndGetToken(): Promise<string | null> {
       name: 'Varsayilan',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#b91c1c',
+      lightColor: '#059669',
     });
   }
 
@@ -55,6 +67,7 @@ export async function registerGuestDeviceToken(): Promise<string | null> {
 
 async function saveGuestToken(token: string): Promise<void> {
   const platform = Platform.OS as 'ios' | 'android';
+  const deviceName = getDeviceName();
 
   const { error } = await supabase
     .from('device_tokens')
@@ -65,6 +78,7 @@ async function saveGuestToken(token: string): Promise<void> {
         platform,
         is_active: true,
         is_guest: true,
+        device_name: deviceName,
         last_seen_at: new Date().toISOString(),
       },
       { onConflict: 'token' }
@@ -77,6 +91,7 @@ async function saveGuestToken(token: string): Promise<void> {
 
 async function linkTokenToMember(memberId: string, token: string): Promise<void> {
   const platform = Platform.OS as 'ios' | 'android';
+  const deviceName = getDeviceName();
 
   const { error } = await supabase
     .from('device_tokens')
@@ -87,6 +102,7 @@ async function linkTokenToMember(memberId: string, token: string): Promise<void>
         platform,
         is_active: true,
         is_guest: false,
+        device_name: deviceName,
         last_seen_at: new Date().toISOString(),
       },
       { onConflict: 'token' }
