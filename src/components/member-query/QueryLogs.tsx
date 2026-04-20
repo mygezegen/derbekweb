@@ -141,6 +141,7 @@ export function QueryLogs({ logs, loading, onRefresh }: Props) {
       const q = search.toLowerCase();
       return (
         l.queried_tc?.includes(q) ||
+        l.queried_name?.toLowerCase().includes(q) ||
         l.ip_address?.includes(q) ||
         l.client_name?.toLowerCase().includes(q)
       );
@@ -209,7 +210,7 @@ export function QueryLogs({ logs, loading, onRefresh }: Props) {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="TC, IP veya istemci ara..."
+            placeholder="TC, ad soyad, IP veya istemci ara..."
             className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -263,6 +264,7 @@ export function QueryLogs({ logs, loading, onRefresh }: Props) {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Zaman</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">İstemci</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">TC No</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ad Soyad</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">IP Adresi</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Durum</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Detay</th>
@@ -304,9 +306,14 @@ export function QueryLogs({ logs, loading, onRefresh }: Props) {
                         </td>
                         <td className="px-4 py-3">
                           {log.queried_tc ? (
-                            <span className="font-mono text-xs text-gray-700">
-                              {log.queried_tc.slice(0, 3)}••••{log.queried_tc.slice(-4)}
-                            </span>
+                            <span className="font-mono text-xs text-gray-700">{log.queried_tc}</span>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {log.queried_name ? (
+                            <span className="text-xs font-medium text-gray-700">{log.queried_name}</span>
                           ) : (
                             <span className="text-gray-300 text-xs">—</span>
                           )}
@@ -326,7 +333,7 @@ export function QueryLogs({ logs, loading, onRefresh }: Props) {
                       </tr>
                       {isExpanded && log.queried_tc && (
                         <tr key={`${log.id}-detail`} className="bg-blue-50/20">
-                          <td colSpan={7} className="px-0 py-0">
+                          <td colSpan={8} className="px-0 py-0">
                             <MemberDetailPanel
                               tc={log.queried_tc}
                               onClose={() => setExpandedId(null)}

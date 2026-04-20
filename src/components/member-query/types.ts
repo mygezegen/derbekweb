@@ -38,6 +38,7 @@ export interface QueryLog {
   client_id: string | null;
   client_name: string | null;
   queried_tc: string | null;
+  queried_name: string | null;
   ip_address: string | null;
   user_agent: string | null;
   found: boolean;

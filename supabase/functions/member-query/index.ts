@@ -392,6 +392,7 @@ Deno.serve(async (req: Request) => {
       client_id: client.id,
       client_name: client.name,
       queried_tc: tcClean,
+      queried_name: member?.full_name || null,
       ip_address: ip,
       user_agent: userAgent,
       found,

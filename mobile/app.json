@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Dernek",
+    "name": "Çaybaşı Dernek Mobil",
     "slug": "dernek-mobile",
     "scheme": "dernek",
     "version": "1.0.0",
@@ -12,10 +12,15 @@
       "resizeMode": "contain",
       "backgroundColor": "#b91c1c"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dernek.mobile"
+      "bundleIdentifier": "com.dernek.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +32,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "plugins": [
       [
         "expo-notifications",
@@ -36,7 +41,16 @@
           "color": "#b91c1c",
           "sounds": []
         }
-      ]
-    ]
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2b5b2ab6-b84a-4ec0-8b1c-cf40c046d340"
+      }
+    },
+    "owner": "mygezegen"
   }
 }

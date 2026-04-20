@@ -68,25 +68,14 @@ export async function registerGuestDeviceToken(): Promise<string | null> {
 async function saveGuestToken(token: string): Promise<void> {
   const platform = Platform.OS as 'ios' | 'android';
   const deviceName = getDeviceName();
-  const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from('device_tokens')
-    .select('id')
-    .eq('token', token)
-    .maybeSingle();
-
-  if (existing) {
-    await supabase
-      .from('device_tokens')
-      .update({ is_active: true, is_guest: true, member_id: null, device_name: deviceName, last_seen_at: now })
-      .eq('token', token);
-    return;
-  }
-
-  const { error } = await supabase
-    .from('device_tokens')
-    .insert({ token, member_id: null, platform, is_active: true, is_guest: true, device_name: deviceName, last_seen_at: now });
+  const { error } = await supabase.rpc('upsert_device_token', {
+    p_token: token,
+    p_platform: platform,
+    p_member_id: null,
+    p_is_guest: true,
+    p_device_name: deviceName,
+  });
 
   if (error) {
     console.error('Guest device token kaydetme hatasi:', error);
@@ -96,25 +85,14 @@ async function saveGuestToken(token: string): Promise<void> {
 async function linkTokenToMember(memberId: string, token: string): Promise<void> {
   const platform = Platform.OS as 'ios' | 'android';
   const deviceName = getDeviceName();
-  const now = new Date().toISOString();
 
-  const { data: existing } = await supabase
-    .from('device_tokens')
-    .select('id')
-    .eq('token', token)
-    .maybeSingle();
-
-  if (existing) {
-    await supabase
-      .from('device_tokens')
-      .update({ member_id: memberId, is_active: true, is_guest: false, device_name: deviceName, last_seen_at: now })
-      .eq('token', token);
-    return;
-  }
-
-  const { error } = await supabase
-    .from('device_tokens')
-    .insert({ token, member_id: memberId, platform, is_active: true, is_guest: false, device_name: deviceName, last_seen_at: now });
+  const { error } = await supabase.rpc('upsert_device_token', {
+    p_token: token,
+    p_platform: platform,
+    p_member_id: memberId,
+    p_is_guest: false,
+    p_device_name: deviceName,
+  });
 
   if (error) {
     console.error('Device token kaydetme hatasi:', error);
