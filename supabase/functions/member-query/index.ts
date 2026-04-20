@@ -245,16 +245,19 @@ Deno.serve(async (req: Request) => {
     }
 
     let tc: string | null = null;
+    let requestedName: string | null = null;
 
     if (req.method === "POST") {
       try {
         const body = await req.json();
         tc = body.tc || body.tc_no || body.kimlik_no || null;
+        requestedName = body.name || body.ad_soyad || body.full_name || null;
       } catch {
         // ignore
       }
     } else {
       tc = params.get("tc") || params.get("tc_no") || params.get("kimlik_no");
+      requestedName = params.get("name") || params.get("ad_soyad") || params.get("full_name");
     }
 
     if (!tc || tc.trim() === "") {
@@ -392,7 +395,7 @@ Deno.serve(async (req: Request) => {
       client_id: client.id,
       client_name: client.name,
       queried_tc: tcClean,
-      queried_name: member?.full_name || null,
+      queried_name: member?.full_name || requestedName || null,
       ip_address: ip,
       user_agent: userAgent,
       found,
