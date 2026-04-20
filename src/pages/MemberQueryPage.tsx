@@ -103,7 +103,7 @@ export function MemberQueryPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({ tc: tcClean }),
+        body: JSON.stringify({ tc: tcClean, name: name.trim() || undefined }),
       });
 
       const data = await res.json();
