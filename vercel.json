@@ -20,6 +20,10 @@
     {
       "src": "/(.*)",
       "dest": "/index.html"
+    },
+    {
+  "src": "/gizlilik/(.*)",
+  "dest": "/gizlilik/$1"
     }
   ]
 }
