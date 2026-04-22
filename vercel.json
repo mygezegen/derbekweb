@@ -10,20 +10,20 @@
       "methods": ["GET", "POST", "OPTIONS"]
     },
     {
+      "src": "/politika/(.*)",
+      "dest": "/politika/$1"
+    },
+    {
       "src": "^/(assets|icons|images)/(.*)",
       "dest": "/$1/$2"
     },
     {
-      "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|webmanifest))$",
+      "src": "^/(.*\\.(html|js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|webmanifest))$",
       "dest": "/$1"
     },
     {
       "src": "/(.*)",
       "dest": "/index.html"
-    },
-    {
-  "src": "/politika/(.*)",
-  "dest": "/politika/$1"
     }
   ]
 }
