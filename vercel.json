@@ -3,11 +3,16 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": null,
+  "cleanUrls": true,
   "routes": [
     {
       "src": "/api/member-query",
       "dest": "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query",
       "methods": ["GET", "POST", "OPTIONS"]
+    },
+    {
+      "src": "/politika",
+      "dest": "/politika/index.html"
     },
     {
       "src": "/politika/(.*)",
