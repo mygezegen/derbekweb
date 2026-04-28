@@ -43,7 +43,7 @@ const STATUS_CONFIG = {
   cancelled: { label: 'İptal', color: '#9ca3af', bg: '#f3f4f6', icon: 'close-circle' as const },
 };
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }: { navigation: any }) {
   const { member, signOut, refreshMember } = useAuth();
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState(member?.phone || '');
@@ -278,6 +278,29 @@ export default function ProfileScreen() {
         <Ionicons name="log-out-outline" size={20} color="#dc2626" />
         <Text style={styles.logoutText}>Çıkış Yap</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.deleteAccountBtn}
+        onPress={() =>
+          Alert.alert(
+            'Hesabı Sil',
+            'Hesabınızı silmek için kimlik doğrulama gereklidir. Devam etmek istiyor musunuz?',
+            [
+              { text: 'İptal', style: 'cancel' },
+              {
+                text: 'Devam Et',
+                style: 'destructive',
+                onPress: () => (navigation as any).navigate('AuthTab', {
+                  screen: 'DeleteAccount',
+                }),
+              },
+            ]
+          )
+        }
+      >
+        <Ionicons name="trash-outline" size={15} color="#9ca3af" />
+        <Text style={styles.deleteAccountText}>Hesabımı silmek istiyorum</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -385,4 +408,9 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
   logoutText: { fontSize: 15, fontWeight: '700', color: '#dc2626' },
+  deleteAccountBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginTop: 8, marginBottom: 16, paddingVertical: 12,
+  },
+  deleteAccountText: { fontSize: 13, color: '#9ca3af' },
 });

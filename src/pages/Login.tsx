@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { LogIn, Mail, CreditCard, Smartphone, ArrowLeft, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Mail, CreditCard, Smartphone, ArrowLeft, ShieldCheck, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { SMSPasswordReset } from '../components/SMSPasswordReset';
+import { DeleteAccountModal } from '../components/DeleteAccountModal';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -21,6 +22,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
   const [loginType, setLoginType] = useState<LoginMode>('email');
   const [resetType, setResetType] = useState<'email' | 'tc'>('email');
   const [showSmsReset, setShowSmsReset] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const [smsPhone, setSmsPhone] = useState('');
   const [smsMaskedPhone, setSmsMaskedPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -596,8 +598,29 @@ export function Login({ onLoginSuccess }: LoginProps) {
               Kayıt Olun
             </button>
           </div>
+
+          <div className="text-center pt-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => setShowDeleteAccount(true)}
+              className="text-xs text-red-400 hover:text-red-600 font-medium hover:underline transition-all flex items-center justify-center gap-1.5 mx-auto"
+            >
+              <Trash2 size={13} />
+              Hesabımı Sil
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDeleteAccount && (
+        <DeleteAccountModal
+          onClose={() => setShowDeleteAccount(false)}
+          onDeleted={() => {
+            setShowDeleteAccount(false);
+            navigate('/');
+          }}
+        />
+      )}
     </div>
   );
 }

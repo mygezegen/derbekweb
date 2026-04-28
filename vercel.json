@@ -2,23 +2,24 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
-  "cleanUrls": true,
-  "rewrites": [
+  "framework": null,
+  "routes": [
     {
-      "source": "/api/member-query",
-      "destination": "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query"
+      "src": "/api/member-query",
+      "dest": "https://twktxzhsrobccqmheotf.supabase.co/functions/v1/member-query",
+      "methods": ["GET", "POST", "OPTIONS"]
     },
     {
-      "source": "/politika",
-      "destination": "/politika/index.html"
+      "src": "^/(assets|icons|images)/(.*)",
+      "dest": "/$1/$2"
     },
     {
-      "source": "/politika/:path*",
-      "destination": "/politika/:path*"
+      "src": "^/(.*\\.(js|css|png|jpg|jpeg|svg|ico|json|woff|woff2|ttf|webmanifest))$",
+      "dest": "/$1"
     },
     {
-      "source": "/((?!api|politika|assets|icons|images|.*\\..*).*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }

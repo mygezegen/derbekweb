@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Member } from '../types';
 import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package, Clock, UserCheck, XCircle } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
@@ -14,14 +15,27 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ onRefresh }: AdminPanelProps) {
+  const { member: currentMember } = useAuth();
+  const isRoot = currentMember?.is_root ?? false;
+
   const [activeTab, setActiveTab] = useState<'members' | 'payments' | 'social' | 'verification' | 'categories' | 'inventory_categories'>('members');
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [pendingDeletionCount, setPendingDeletionCount] = useState(0);
 
   useEffect(() => {
     loadMembers();
-  }, []);
+    if (isRoot) loadPendingDeletionCount();
+  }, [isRoot]);
+
+  const loadPendingDeletionCount = async () => {
+    const { count } = await supabase
+      .from('account_deletion_requests')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending_admin');
+    setPendingDeletionCount(count ?? 0);
+  };
 
   const loadMembers = async () => {
     try {
@@ -241,8 +255,13 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
               }`}
             >
               <CheckCircle size={18} className="sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">Kimlik Doğrulama</span>
+              <span className="hidden sm:inline">Doğrulama & Silme</span>
               <span className="sm:hidden">Doğrulama</span>
+              {isRoot && pendingDeletionCount > 0 && (
+                <span className="bg-red-600 text-white text-xs rounded-full px-1.5 py-0.5 leading-none">
+                  {pendingDeletionCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('categories')}

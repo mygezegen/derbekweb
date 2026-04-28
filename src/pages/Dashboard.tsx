@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Member, Announcement, Event, DashboardStats, PageSetting } from '../types';
-import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search, Smartphone, ToggleLeft } from 'lucide-react';
+import { LogOut, Home, Users, Bell, Calendar, Settings, DollarSign, Image, PackagePlus, Phone, Sliders, Mail, UserCog, FileText, Menu, X, Wallet, MessageSquare, Pill, QrCode, ClipboardList, Package, TrendingUp, Globe, Search, Smartphone, ToggleLeft, Trash2 } from 'lucide-react';
 import { MemberDirectory } from '../components/MemberDirectory';
 import { MemberInfo } from '../components/MemberInfo';
 import { AnnouncementsList } from '../components/AnnouncementsList';
@@ -29,6 +29,7 @@ import { SocialMediaMonitor } from '../components/social-monitor/SocialMediaMoni
 import { MemberQueryManagement } from '../components/member-query/MemberQueryManagement';
 import { SEOSettings } from '../components/SEOSettings';
 import ModuleConfigPanel from '../components/ModuleConfigPanel';
+import { DeleteAccountModal } from '../components/DeleteAccountModal';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -44,6 +45,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const [pageSettings, setPageSettings] = useState<PageSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -216,6 +218,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   });
 
   return (
+    <>
     <EmailVerificationCheck>
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <nav className="bg-gradient-to-r from-red-600 to-red-700 shadow-lg sticky top-0 z-50 border-b-4 border-green-600">
@@ -354,6 +357,22 @@ export function Dashboard({ onLogout }: DashboardProps) {
                 </div>
               )}
             </div>
+
+            {!(currentMember?.is_admin || currentMember?.is_root) && (
+              <div className="bg-white rounded-lg shadow p-4 sm:p-6 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Hesabımı Sil</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Hesabınızı kalıcı olarak silebilirsiniz.</p>
+                </div>
+                <button
+                  onClick={() => setShowDeleteAccount(true)}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-200 text-red-600 rounded-lg hover:bg-red-100 hover:border-red-300 transition-all text-sm font-semibold flex-shrink-0"
+                >
+                  <Trash2 size={15} />
+                  Hesabı Sil
+                </button>
+              </div>
+            )}
 
             <div className="bg-white rounded-lg shadow p-4 sm:p-6 md:p-8">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-4">Son Duyurular</h3>
@@ -567,5 +586,16 @@ export function Dashboard({ onLogout }: DashboardProps) {
       </div>
     </div>
     </EmailVerificationCheck>
+
+    {showDeleteAccount && (
+      <DeleteAccountModal
+        onClose={() => setShowDeleteAccount(false)}
+        onDeleted={() => {
+          setShowDeleteAccount(false);
+          handleLogout();
+        }}
+      />
+    )}
+    </>
   );
 }

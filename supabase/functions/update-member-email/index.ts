@@ -59,6 +59,14 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(new_email)) {
+      return new Response(
+        JSON.stringify({ error: "Geçerli bir e-posta adresi giriniz" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { data: targetMember } = await supabaseAdmin
       .from("members")
       .select("auth_id, email")
@@ -79,6 +87,42 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // E-posta başka bir aktif kullanıcıda kayıtlı mı kontrol et
+    // Pasif veya auth_id'si olmayan üyelerde kullanılıyorsa izin ver
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    if (existingUsers) {
+      const conflict = existingUsers.users.find(
+        u => u.email?.toLowerCase() === new_email.toLowerCase() && u.id !== targetMember.auth_id
+      );
+      if (conflict) {
+        // Çakışan auth kullanıcısının members tablosundaki durumunu kontrol et
+        const { data: conflictMember } = await supabaseAdmin
+          .from("members")
+          .select("id, is_active, auth_id")
+          .eq("auth_id", conflict.id)
+          .maybeSingle();
+
+        // Aktif bir üyeyle çakışıyorsa engelle
+        const isActiveMember = conflictMember && conflictMember.is_active !== false;
+        if (isActiveMember) {
+          return new Response(
+            JSON.stringify({ error: "Bu e-posta adresi aktif başka bir kullanıcı tarafından kullanılıyor" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Pasif/eşleşmeyen üye — çakışan auth hesabının emailini değiştir (serbest bırak)
+        const freedEmail = `deleted_${conflict.id}@removed.local`;
+        await supabaseAdmin.auth.admin.updateUserById(conflict.id, { email: freedEmail });
+        if (conflictMember) {
+          await supabaseAdmin
+            .from("members")
+            .update({ email: freedEmail, updated_at: new Date().toISOString() })
+            .eq("id", conflictMember.id);
+        }
+      }
+    }
+
     if (targetMember.auth_id) {
       const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(
         targetMember.auth_id,
@@ -86,18 +130,34 @@ Deno.serve(async (req: Request) => {
       );
 
       if (updateAuthError) {
+        console.error("Auth email güncelleme hatası:", updateAuthError);
         return new Response(
-          JSON.stringify({ error: `Auth email güncellenemedi: ${updateAuthError.message}` }),
+          JSON.stringify({ error: `E-posta güncellenemedi: ${updateAuthError.message}` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
+    // members tablosunu da güncelle
+    const { error: memberUpdateError } = await supabaseAdmin
+      .from("members")
+      .update({ email: new_email, updated_at: new Date().toISOString() })
+      .eq("id", member_id);
+
+    if (memberUpdateError) {
+      console.error("Member email güncelleme hatası:", memberUpdateError);
+      return new Response(
+        JSON.stringify({ error: `Üye kaydı güncellenemedi: ${memberUpdateError.message}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ success: true, message: "Email başarıyla güncellendi" }),
+      JSON.stringify({ success: true, message: "E-posta başarıyla güncellendi" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
+    console.error("update-member-email hatası:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Bilinmeyen bir hata oluştu" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

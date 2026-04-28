@@ -8,9 +8,10 @@ const corsHeaders = {
 };
 
 interface ResetPasswordRequest {
+  action?: 'verify_code' | 'reset_password';
   smsCode: string;
   phoneNumber: string;
-  newPassword: string;
+  newPassword?: string;
   newEmail?: string;
 }
 
@@ -23,9 +24,42 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { smsCode, phoneNumber, newPassword, newEmail }: ResetPasswordRequest = await req.json();
+    const body: ResetPasswordRequest = await req.json();
+    const { action, smsCode, phoneNumber, newPassword, newEmail } = body;
 
-    if (!smsCode || !phoneNumber || !newPassword) {
+    if (!smsCode || !phoneNumber) {
+      throw new Error('SMS kodu ve telefon numarası gereklidir');
+    }
+
+    // action: 'verify_code' — sadece kodu doğrula, şifre değiştirme
+    if (action === 'verify_code') {
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      );
+
+      const { data, error: verifyError } = await supabaseClient
+        .rpc('validate_password_reset_code', {
+          p_reset_code: smsCode,
+          p_phone_number: phoneNumber
+        });
+
+      if (verifyError) {
+        throw new Error(`Kod doğrulanamadı: ${verifyError.message}`);
+      }
+
+      if (!data || data.length === 0 || !data[0].is_valid) {
+        throw new Error(data?.[0]?.error_message || 'Geçersiz veya süresi dolmuş kod');
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, message: 'Kod doğrulandı' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // action: 'reset_password' or legacy (no action) — kod doğrula + şifre değiştir
+    if (!newPassword) {
       throw new Error('SMS kodu, telefon numarası ve yeni şifre gereklidir');
     }
 
@@ -33,7 +67,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Şifre en az 6 karakter olmalıdır');
     }
 
-    // Validate email if provided
     if (newEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(newEmail)) {
@@ -65,14 +98,12 @@ Deno.serve(async (req: Request) => {
 
     const userId = data[0].user_id;
 
-    // Get current user data
     const { data: userData, error: userError } = await supabaseClient.auth.admin.getUserById(userId);
 
     if (userError || !userData.user) {
       throw new Error('Kullanıcı bulunamadı');
     }
 
-    // Check if new email is already in use
     if (newEmail && newEmail !== userData.user.email) {
       const { data: existingUser } = await supabaseClient.auth.admin.listUsers();
       const emailExists = existingUser.users.some(u => u.email?.toLowerCase() === newEmail.toLowerCase() && u.id !== userId);
@@ -82,7 +113,6 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Update password
     const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
       userId,
       { password: newPassword }
@@ -92,7 +122,6 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Şifre güncellenemedi: ${updateError.message}`);
     }
 
-    // Update email if provided
     if (newEmail && newEmail !== userData.user.email) {
       const { error: emailUpdateError } = await supabaseClient.auth.admin.updateUserById(
         userId,
@@ -103,14 +132,12 @@ Deno.serve(async (req: Request) => {
         throw new Error(`E-posta güncellenemedi: ${emailUpdateError.message}`);
       }
 
-      // Also update in members table
       await supabaseClient
         .from('members')
         .update({ email: newEmail, updated_at: new Date().toISOString() })
         .eq('auth_id', userId);
     }
 
-    // Mark token as used
     await supabaseClient
       .from('password_reset_tokens')
       .update({ used_at: new Date().toISOString() })

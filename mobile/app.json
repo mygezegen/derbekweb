@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Çaybaşı Dernek Mobil",
+    "name": "Dernek",
     "slug": "dernek-mobile",
     "scheme": "dernek",
-    "version": "2.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,15 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#b91c1c"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dernek.mobile",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "bundleIdentifier": "com.dernek.mobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +27,12 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "newArchEnabled": true,
+    "newArchEnabled": false,
+    "extra": {
+      "eas": {
+        "projectId": "2b5b2ab6-b84a-4ec0-8b1c-cf40c046d340"
+      }
+    },
     "plugins": [
       [
         "expo-notifications",
@@ -41,16 +41,7 @@
           "color": "#b91c1c",
           "sounds": []
         }
-      ],
-      "expo-asset",
-      "expo-font",
-      "expo-secure-store"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "2b5b2ab6-b84a-4ec0-8b1c-cf40c046d340"
-      }
-    },
-    "owner": "mygezegen"
+      ]
+    ]
   }
 }

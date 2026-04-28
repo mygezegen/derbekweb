@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
@@ -23,8 +24,22 @@ function getDeviceName(): string {
   return Platform.OS === 'ios' ? 'iPhone/iPad' : 'Android Cihaz';
 }
 
+const FALLBACK_PROJECT_ID = '2b5b2ab6-b84a-4ec0-8b1c-cf40c046d340';
+
+function getProjectId(): string {
+  // Expo SDK 49+ — EAS projectId öncelikli, sonra expoConfig.extra.eas, son olarak hardcoded fallback
+  return (
+    Constants.easConfig?.projectId ??
+    (Constants.expoConfig?.extra as any)?.eas?.projectId ??
+    FALLBACK_PROJECT_ID
+  );
+}
+
 async function requestAndGetToken(): Promise<string | null> {
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice) {
+    console.warn('[Push] Gerçek bir cihaz değil, token alınamaz.');
+    return null;
+  }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -34,7 +49,10 @@ async function requestAndGetToken(): Promise<string | null> {
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') return null;
+  if (finalStatus !== 'granted') {
+    console.warn('[Push] Bildirim izni verilmedi, durum:', finalStatus);
+    return null;
+  }
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -45,8 +63,15 @@ async function requestAndGetToken(): Promise<string | null> {
     });
   }
 
-  const tokenData = await Notifications.getExpoPushTokenAsync();
-  return tokenData.data;
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: getProjectId(),
+    });
+    return tokenData.data;
+  } catch (err) {
+    console.error('[Push] Token alınamadı:', err);
+    return null;
+  }
 }
 
 export async function registerForPushNotifications(memberId: string): Promise<string | null> {
@@ -78,7 +103,7 @@ async function saveGuestToken(token: string): Promise<void> {
   });
 
   if (error) {
-    console.error('Guest device token kaydetme hatasi:', error);
+    console.error('[Push] Guest token kaydetme hatası:', error);
   }
 }
 
@@ -95,18 +120,22 @@ async function linkTokenToMember(memberId: string, token: string): Promise<void>
   });
 
   if (error) {
-    console.error('Device token kaydetme hatasi:', error);
+    console.error('[Push] Member token kaydetme hatası:', error);
   }
 }
 
 export async function deactivateDeviceToken(memberId: string): Promise<void> {
-  const tokenData = await Notifications.getExpoPushTokenAsync().catch(() => null);
-  if (!tokenData) return;
-
-  await supabase
-    .from('device_tokens')
-    .update({ is_active: false, member_id: null, is_guest: true })
-    .eq('token', tokenData.data);
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: getProjectId(),
+    });
+    await supabase
+      .from('device_tokens')
+      .update({ is_active: false, member_id: null, is_guest: true })
+      .eq('token', tokenData.data);
+  } catch {
+    // Token alınamazsa zaten pasif sayılır
+  }
 }
 
 export function registerNotificationListeners(
