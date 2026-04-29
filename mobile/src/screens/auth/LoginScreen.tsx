@@ -358,6 +358,11 @@ export default function LoginScreen({ navigation }: Props) {
                 <Text style={s.signupLink}>Kayıt Ol</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity onPress={() => navigation.navigate('DeleteAccount')} style={s.deleteAccountRow}>
+              <Ionicons name="trash-outline" size={13} color="#9ca3af" />
+              <Text style={s.deleteAccountText}>Hesabımı silmek istiyorum</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -495,6 +500,8 @@ const s = StyleSheet.create({
   signupRow: { flexDirection: 'row', justifyContent: 'center', marginTop: 8, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
   signupText: { fontSize: 14, color: '#6b7280' },
   signupLink: { fontSize: 14, color: '#059669', fontWeight: '600' },
+  deleteAccountRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 12 },
+  deleteAccountText: { fontSize: 12, color: '#9ca3af' },
   infoBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: '#fffbeb', borderWidth: 1, borderColor: '#fcd34d',

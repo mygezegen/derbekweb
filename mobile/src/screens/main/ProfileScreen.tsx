@@ -281,22 +281,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
 
       <TouchableOpacity
         style={styles.deleteAccountBtn}
-        onPress={() =>
-          Alert.alert(
-            'Hesabı Sil',
-            'Hesabınızı silmek için kimlik doğrulama gereklidir. Devam etmek istiyor musunuz?',
-            [
-              { text: 'İptal', style: 'cancel' },
-              {
-                text: 'Devam Et',
-                style: 'destructive',
-                onPress: () => (navigation as any).navigate('AuthTab', {
-                  screen: 'DeleteAccount',
-                }),
-              },
-            ]
-          )
-        }
+        onPress={() => navigation.navigate('DeleteAccount')}
       >
         <Ionicons name="trash-outline" size={15} color="#9ca3af" />
         <Text style={styles.deleteAccountText}>Hesabımı silmek istiyorum</Text>

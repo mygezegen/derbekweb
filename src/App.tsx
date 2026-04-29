@@ -8,6 +8,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Signup } from './pages/Signup';
 import { SurveyPage } from './pages/SurveyPage';
 import { MemberQueryPage } from './pages/MemberQueryPage';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
 
@@ -98,6 +99,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/survey/:id" element={<SurveyPage />} />
           <Route path="/sorgu" element={<MemberQueryPage />} />
+          <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

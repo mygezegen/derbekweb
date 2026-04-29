@@ -3,7 +3,7 @@
     "name": "Dernek",
     "slug": "dernek-mobile",
     "scheme": "dernek",
-    "version": "1.0.0",
+    "version": "4.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,10 +12,15 @@
       "resizeMode": "contain",
       "backgroundColor": "#b91c1c"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.dernek.mobile"
+      "bundleIdentifier": "com.dernek.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +32,6 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "newArchEnabled": false,
     "extra": {
       "eas": {
         "projectId": "2b5b2ab6-b84a-4ec0-8b1c-cf40c046d340"

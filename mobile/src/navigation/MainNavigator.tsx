@@ -29,6 +29,7 @@ import WhatsAppScreen from '../screens/main/WhatsAppScreen';
 import TreasuryScreen from '../screens/main/TreasuryScreen';
 import DuesAdminScreen from '../screens/main/DuesAdminScreen';
 import DrawerMenu from '../components/DrawerMenu';
+import DeleteAccountScreen from '../screens/main/DeleteAccountScreen';
 
 const styles = StyleSheet.create({
   tabLabel: { fontSize: 11, fontWeight: '600' },
@@ -123,16 +124,23 @@ type MembersStackParamList = {
   MemberDetail: { memberId: string };
 };
 
+type ProfileStackParamList = {
+  ProfileMain: undefined;
+  DeleteAccount: undefined;
+};
+
 type AuthStackParamList = {
   Login: undefined;
   Signup: undefined;
   ForgotPassword: undefined;
+  DeleteAccount: undefined;
 };
 
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const AnnouncementsStack = createNativeStackNavigator<AnnouncementsStackParamList>();
 const EventsStack = createNativeStackNavigator<EventsStackParamList>();
 const MembersStack = createNativeStackNavigator<MembersStackParamList>();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const GuestTab = createBottomTabNavigator();
 const MemberTab = createBottomTabNavigator();
@@ -203,12 +211,38 @@ function MembersStackNavigator() {
   );
 }
 
+function ProfileStackNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <ProfileStack.Screen name="ProfileMain" options={{ title: 'Profilim' }}>
+        {({ navigation }) => <ProfileScreen navigation={navigation} />}
+      </ProfileStack.Screen>
+      <ProfileStack.Screen
+        name="DeleteAccount"
+        component={DeleteAccountScreen}
+        options={{ title: 'Hesabı Sil', headerLeft: undefined }}
+      />
+    </ProfileStack.Navigator>
+  );
+}
+
 function AuthStackNavigator() {
   return (
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Signup" component={SignupScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen
+        name="DeleteAccount"
+        component={DeleteAccountScreen}
+        options={{
+          headerShown: true,
+          title: 'Hesabı Sil',
+          headerStyle: { backgroundColor: '#b91c1c' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      />
     </AuthStack.Navigator>
   );
 }
@@ -315,10 +349,9 @@ function MemberNavigatorInner() {
       </MemberTab.Screen>
       <MemberTab.Screen
         name="ProfileTab"
-        options={{ title: 'Profilim', headerShown: true, ...sharedHeaderOptions }}
-      >
-        {() => <ProfileScreen />}
-      </MemberTab.Screen>
+        component={ProfileStackNavigator}
+        options={{ title: 'Profilim', headerShown: false }}
+      />
     </MemberTab.Navigator>
   );
 }
