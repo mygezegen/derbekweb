@@ -1,4 +1,4 @@
-import { Home, Users, Bell, Calendar, DollarSign, Wallet, Image as ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut, Pill, Package, TrendingUp, Smartphone, ToggleLeft } from 'lucide-react';
+import { Home, Users, Bell, Calendar, DollarSign, Wallet, Image as ImageIcon, Phone, FileText, Mail, MessageSquare, BarChart3, Settings, LogOut, Pill, Package, TrendingUp, Smartphone, ToggleLeft, Shield } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useModuleConfig } from '../hooks/useModuleConfig';
 
@@ -92,6 +92,16 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
         <LogOut className="w-5 h-5" />
         <span className="text-sm">Çıkış Yap</span>
       </button>
+
+      <a
+        href="/politika"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center space-x-2 px-4 py-2.5 text-red-300 hover:text-white hover:bg-red-600 transition-colors border-t border-red-800"
+      >
+        <Shield className="w-4 h-4" />
+        <span className="text-xs">Gizlilik Politikası</span>
+      </a>
     </div>
   );
 }

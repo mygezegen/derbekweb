@@ -609,6 +609,16 @@ export function Login({ onLoginSuccess }: LoginProps) {
               Hesabımı Sil
             </button>
           </div>
+
+          <div className="text-center pt-2">
+            <a
+              href="/politika"
+              className="text-xs text-gray-400 hover:text-emerald-600 transition-colors flex items-center justify-center gap-1"
+            >
+              <ShieldCheck size={12} />
+              Gizlilik Politikası
+            </a>
+          </div>
         </div>
       </div>
 

@@ -100,6 +100,7 @@ function App() {
           <Route path="/survey/:id" element={<SurveyPage />} />
           <Route path="/sorgu" element={<MemberQueryPage />} />
           <Route path="/gizlilik-politikasi" element={<PrivacyPolicy />} />
+          <Route path="/politika" element={<PrivacyPolicy />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

@@ -1036,7 +1036,15 @@ export default function LandingPage() {
 
           <div className="mt-8 pt-6 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-500">
             <p>© 2026 Diyarbakır Çüngüş Çaybaşı Köyü Yardımlaşma ve Dayanışma Derneği. Tüm Hakları Saklıdır.</p>
-            <p>Powered by <span className="text-emerald-400 font-semibold">Ahmet Taştelen</span></p>
+            <div className="flex items-center gap-4">
+              <a
+                href="/politika"
+                className="text-gray-400 hover:text-emerald-400 transition-colors"
+              >
+                Gizlilik Politikası
+              </a>
+              <p>Powered by <span className="text-emerald-400 font-semibold">Ahmet Taştelen</span></p>
+            </div>
           </div>
         </div>
       </footer>
