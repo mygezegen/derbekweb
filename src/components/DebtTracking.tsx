@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { MemberDuesWithDetails } from '../types';
-import { Search, Download, AlertCircle } from 'lucide-react';
+import { Search, Download, AlertCircle, Trash2 } from 'lucide-react';
 
 export function DebtTracking() {
+  const { member: currentMember } = useAuth();
+  const isRoot = currentMember?.is_root ?? false;
   const [memberDues, setMemberDues] = useState<MemberDuesWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -24,6 +27,25 @@ export function DebtTracking() {
       console.error('Error loading member dues:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteDebt = async (item: MemberDuesWithDetails) => {
+    const memberName = item.members?.full_name || 'Bu üye';
+    const duesTitle = item.dues?.title || 'bu borç';
+    if (!confirm(`"${memberName}" üyesinin "${duesTitle}" borç kaydını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('member_dues')
+        .delete()
+        .eq('id', item.id);
+
+      if (error) throw error;
+      setMemberDues(prev => prev.filter(d => d.id !== item.id));
+    } catch (err) {
+      console.error('Error deleting debt:', err);
+      alert('Borç kaydı silinirken bir hata oluştu.');
     }
   };
 
@@ -168,6 +190,7 @@ export function DebtTracking() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ödenen</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kalan</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Durum</th>
+                {isRoot && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlem</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -207,12 +230,24 @@ export function DebtTracking() {
                         {getStatusText(item.status)}
                       </span>
                     </td>
+                    {isRoot && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => handleDeleteDebt(item)}
+                          className="flex items-center gap-1 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors text-xs font-medium"
+                          title="Borç kaydını sil"
+                        >
+                          <Trash2 size={14} />
+                          Sil
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
               {debtDues.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={isRoot ? 10 : 9} className="px-6 py-8 text-center text-gray-500">
                     {search ? 'Arama sonucu bulunamadı' : 'Borçlu üye bulunmuyor'}
                   </td>
                 </tr>

@@ -104,10 +104,14 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   const loadAdminStats = async () => {
     try {
-      const { count: totalMembers } = await supabase
+      const { data: allMembers } = await supabase
         .from('members')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+        .select('id, is_active, pending_approval');
+
+      const totalMembers = (allMembers || []).length;
+      const activeMembers = (allMembers || []).filter((m: any) => m.is_active === true && !m.pending_approval).length;
+      const passiveMembers = (allMembers || []).filter((m: any) => m.is_active === false && !m.pending_approval).length;
+      const pendingMembers = (allMembers || []).filter((m: any) => m.pending_approval === true).length;
 
       const { data: debtData } = await supabase
         .from('member_dues')
@@ -137,7 +141,10 @@ export function Dashboard({ onLogout }: DashboardProps) {
         .gte('event_date', new Date().toISOString());
 
       setStats({
-        totalMembers: totalMembers || 0,
+        totalMembers,
+        activeMembers,
+        passiveMembers,
+        pendingMembers,
         membersInDebt,
         totalDebtAmount,
         paidThisMonth: paidThisMonth || 0,
@@ -311,7 +318,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
                       {stats.totalMembers}
                     </div>
                     <p className="text-sm md:text-base text-gray-200 font-medium">Toplam Üye</p>
-                    <p className="text-xs md:text-sm text-gray-400 mt-1">{stats.membersInDebt} borçlu üye</p>
+                    <div className="flex gap-3 mt-1">
+                      <span className="text-xs text-emerald-400">{stats.activeMembers} aktif</span>
+                      <span className="text-xs text-gray-400">{stats.passiveMembers} pasif</span>
+                      {stats.pendingMembers > 0 && (
+                        <span className="text-xs text-amber-400">{stats.pendingMembers} onay bekliyor</span>
+                      )}
+                    </div>
                   </div>
                   <div className="bg-gradient-to-br from-red-900 to-red-800 p-4 md:p-6 rounded-lg border border-red-500/20">
                     <div className="text-2xl md:text-3xl font-bold text-red-300 mb-2">

@@ -8,6 +8,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,6 +43,8 @@ const STATUS_CONFIG = {
   overdue: { label: 'Gecikmiş', color: '#dc2626', bg: '#fee2e2', icon: 'alert-circle' as const },
   cancelled: { label: 'İptal', color: '#9ca3af', bg: '#f3f4f6', icon: 'close-circle' as const },
 };
+
+const PRIVACY_POLICY_URL = 'https://www.caybasi.org/politika';
 
 export default function ProfileScreen({ navigation }: { navigation: any }) {
   const { member, signOut, refreshMember } = useAuth();
@@ -280,6 +283,14 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
       </TouchableOpacity>
 
       <TouchableOpacity
+        style={styles.privacyBtn}
+        onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}
+      >
+        <Ionicons name="shield-checkmark-outline" size={15} color="#9ca3af" />
+        <Text style={styles.privacyBtnText}>Gizlilik Politikası</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={styles.deleteAccountBtn}
         onPress={() => navigation.navigate('DeleteAccount')}
       >
@@ -393,9 +404,14 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
   logoutText: { fontSize: 15, fontWeight: '700', color: '#dc2626' },
+  privacyBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginHorizontal: 16, marginTop: 8, paddingVertical: 12,
+  },
+  privacyBtnText: { fontSize: 13, color: '#9ca3af' },
   deleteAccountBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginHorizontal: 16, marginTop: 8, marginBottom: 16, paddingVertical: 12,
+    marginHorizontal: 16, marginTop: 4, marginBottom: 16, paddingVertical: 12,
   },
   deleteAccountText: { fontSize: 13, color: '#9ca3af' },
 });

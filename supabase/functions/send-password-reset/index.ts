@@ -307,10 +307,7 @@ Deno.serve(async (req: Request) => {
       throw new Error('Şifre sıfırlama bağlantısı oluşturulamadı');
     }
 
-    const rawActionLink = resetData.properties.action_link;
-    const actionUrl = new URL(rawActionLink);
-    actionUrl.searchParams.set('redirect_to', appUrl);
-    const resetUrl = actionUrl.toString();
+    const resetUrl = resetData.properties.action_link;
 
 
     const emailHtml = `

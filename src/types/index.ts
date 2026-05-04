@@ -159,6 +159,9 @@ export interface EventWithParticipants extends Event {
 
 export interface DashboardStats {
   totalMembers: number;
+  activeMembers: number;
+  passiveMembers: number;
+  pendingMembers: number;
   membersInDebt: number;
   totalDebtAmount: number;
   paidThisMonth: number;

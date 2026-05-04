@@ -121,9 +121,9 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
       );
 
       const result = await response.json();
-      console.error('API Response:', response.status, JSON.stringify(result));
       if (!response.ok) throw new Error(result.error || result.message || JSON.stringify(result) || 'Üye eklenirken hata oluştu');
 
+      await new Promise(resolve => setTimeout(resolve, 600));
       onSaved();
       onClose();
     } catch (err: unknown) {
