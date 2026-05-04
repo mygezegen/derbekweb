@@ -86,7 +86,22 @@ Deno.serve(async (req: Request) => {
       representative_name,
       representative_tc_no,
       website,
+      dues_ids,
     } = body;
+
+    // Helper: assign dues to a member (insert member_dues rows, ignore conflicts)
+    const assignDues = async (memberId: string) => {
+      if (!dues_ids || !Array.isArray(dues_ids) || dues_ids.length === 0) return;
+      const rows = dues_ids.map((duesId: string) => ({
+        member_id: memberId,
+        dues_id: duesId,
+        status: 'pending',
+      }));
+      await supabaseAdmin
+        .from('member_dues')
+        .insert(rows)
+        .select(); // ON CONFLICT DO NOTHING handled by unique constraint
+    };
 
     if (!full_name) {
       return new Response(
@@ -188,14 +203,19 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        await assignDues(existingMember.id);
         return new Response(
-          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi` }),
+          JSON.stringify({ success: true, member_id: existingMember.id, message: `${full_name} başarıyla eklendi` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
         // No trigger-created record found, insert directly
         memberData.auth_id = authId;
-        const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+        const { data: insertedMember, error: insertError } = await supabaseAdmin
+          .from("members")
+          .insert(memberData)
+          .select("id")
+          .single();
 
         if (insertError) {
           console.error("Insert hatası:", insertError);
@@ -208,8 +228,9 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        await assignDues(insertedMember.id);
         return new Response(
-          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi (sistem erişimi ile)` }),
+          JSON.stringify({ success: true, member_id: insertedMember.id, message: `${full_name} başarıyla eklendi (sistem erişimi ile)` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -247,12 +268,17 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        await assignDues(existingMemberId);
         return new Response(
-          JSON.stringify({ success: true, message: `${full_name} başarıyla güncellendi` }),
+          JSON.stringify({ success: true, member_id: existingMemberId, message: `${full_name} başarıyla güncellendi` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } else {
-        const { error: insertError } = await supabaseAdmin.from("members").insert(memberData);
+        const { data: insertedMember, error: insertError } = await supabaseAdmin
+          .from("members")
+          .insert(memberData)
+          .select("id")
+          .single();
 
         if (insertError) {
           return new Response(
@@ -261,8 +287,9 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        await assignDues(insertedMember.id);
         return new Response(
-          JSON.stringify({ success: true, message: `${full_name} başarıyla eklendi` }),
+          JSON.stringify({ success: true, member_id: insertedMember.id, message: `${full_name} başarıyla eklendi` }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

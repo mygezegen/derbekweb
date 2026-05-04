@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, UserPlus, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, KeyRound } from 'lucide-react';
+import { X, UserPlus, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, KeyRound, Receipt } from 'lucide-react';
+import { Dues } from '../types';
 
 interface AddMemberModalProps {
   onClose: () => void;
@@ -73,6 +74,32 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormData>(empty);
+  const [availableDues, setAvailableDues] = useState<Dues[]>([]);
+  const [selectedDuesIds, setSelectedDuesIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from('dues')
+      .select('id, title, amount, period_year, period_month, due_date, description, created_by, created_at, updated_at')
+      .order('period_year', { ascending: false })
+      .order('title', { ascending: true })
+      .then(({ data }) => {
+        if (data) setAvailableDues(data);
+      });
+  }, []);
+
+  const toggleDues = (id: string) => {
+    setSelectedDuesIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  // Group dues by year for display
+  const duesByYear = availableDues.reduce<Record<number, Dues[]>>((acc, d) => {
+    if (!acc[d.period_year]) acc[d.period_year] = [];
+    acc[d.period_year].push(d);
+    return acc;
+  }, {});
 
   const set = (field: keyof FormData, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -107,6 +134,7 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
       }
 
       if (form.is_legal_entity) payload.is_legal_entity = true;
+      if (selectedDuesIds.length > 0) payload.dues_ids = selectedDuesIds;
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-member`,
@@ -297,6 +325,74 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
                   <input type="date" value={form.board_decision_date} onChange={(e) => set('board_decision_date', e.target.value)} className={inputCls} />
                 </Field>
               </div>
+            </Section>
+
+            <Section icon={<Receipt size={16} />} title="Aidat Ataması (İsteğe Bağlı)">
+              <p className="text-xs text-gray-500 mb-3">
+                Yeni üyeye atanacak aidat kayıtlarını seçin. Seçilen aidatlar üyeye "Beklemede" olarak eklenir.
+              </p>
+              {Object.keys(duesByYear).length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Sistemde henüz aidat kaydı bulunmuyor.</p>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(duesByYear)
+                    .sort(([a], [b]) => Number(b) - Number(a))
+                    .map(([year, items]) => (
+                      <div key={year}>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{year} Yılı</span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDuesIds(prev => {
+                                const ids = items.map(i => i.id);
+                                const allSelected = ids.every(id => prev.includes(id));
+                                return allSelected
+                                  ? prev.filter(id => !ids.includes(id))
+                                  : [...new Set([...prev, ...ids])];
+                              })}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              {items.every(i => selectedDuesIds.includes(i.id)) ? 'Tümünü Kaldır' : 'Tümünü Seç'}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {items.map(d => (
+                            <label
+                              key={d.id}
+                              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedDuesIds.includes(d.id)
+                                  ? 'bg-green-50 border-green-300'
+                                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedDuesIds.includes(d.id)}
+                                onChange={() => toggleDues(d.id)}
+                                className="w-4 h-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-medium text-gray-800 truncate block">{d.title}</span>
+                              </div>
+                              <span className="text-sm font-bold text-green-700 whitespace-nowrap">
+                                ₺{Number(d.amount).toLocaleString('tr-TR')}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+              {selectedDuesIds.length > 0 && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-700 font-medium">
+                    {selectedDuesIds.length} aidat kaydı seçildi — üye eklendikten sonra otomatik atanacak.
+                  </p>
+                </div>
+              )}
             </Section>
 
             <Section icon={<Briefcase size={16} />} title="Tüzel Kişi Bilgileri (İsteğe Bağlı)">
