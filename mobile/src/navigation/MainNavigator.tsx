@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useDrawer } from '../contexts/DrawerContext';
+import { useModuleConfig } from '../hooks/useModuleConfig';
 
 import HomeScreen from '../screens/main/HomeScreen';
 import AnnouncementsScreen from '../screens/main/AnnouncementsScreen';
@@ -30,6 +31,8 @@ import TreasuryScreen from '../screens/main/TreasuryScreen';
 import DuesAdminScreen from '../screens/main/DuesAdminScreen';
 import DrawerMenu from '../components/DrawerMenu';
 import DeleteAccountScreen from '../screens/main/DeleteAccountScreen';
+import SurveysScreen from '../screens/main/SurveysScreen';
+import SurveyDetailScreen from '../screens/main/SurveyDetailScreen';
 
 const styles = StyleSheet.create({
   tabLabel: { fontSize: 11, fontWeight: '600' },
@@ -90,6 +93,7 @@ const tabBarIcon = (routeName: string, focused: boolean, color: string, size: nu
     EventsTab: ['calendar', 'calendar-outline'],
     DuesTab: ['wallet', 'wallet-outline'],
     MembersTab: ['people', 'people-outline'],
+    SurveysTab: ['clipboard', 'clipboard-outline'],
     NotificationsTab: ['notifications', 'notifications-outline'],
     ProfileTab: ['person', 'person-outline'],
     AuthTab: ['log-in', 'log-in-outline'],
@@ -136,12 +140,18 @@ type AuthStackParamList = {
   DeleteAccount: undefined;
 };
 
+type SurveysStackParamList = {
+  SurveysMain: undefined;
+  SurveyDetail: { id: string; title: string };
+};
+
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
 const AnnouncementsStack = createNativeStackNavigator<AnnouncementsStackParamList>();
 const EventsStack = createNativeStackNavigator<EventsStackParamList>();
 const MembersStack = createNativeStackNavigator<MembersStackParamList>();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+const SurveysStack = createNativeStackNavigator<SurveysStackParamList>();
 const GuestTab = createBottomTabNavigator();
 const MemberTab = createBottomTabNavigator();
 
@@ -247,12 +257,26 @@ function AuthStackNavigator() {
   );
 }
 
+function SurveysStackNavigator() {
+  return (
+    <SurveysStack.Navigator screenOptions={{ ...sharedHeaderOptions }}>
+      <SurveysStack.Screen name="SurveysMain" component={SurveysScreen} options={{ title: 'Anketler' }} />
+      <SurveysStack.Screen
+        name="SurveyDetail"
+        component={SurveyDetailScreen}
+        options={({ route }) => ({ title: route.params.title, headerLeft: undefined })}
+      />
+    </SurveysStack.Navigator>
+  );
+}
+
 const TAB_SCREEN_MAP: Record<string, string> = {
   Home: 'HomeTab',
   Announcements: 'AnnouncementsTab',
   Events: 'EventsTab',
   Dues: 'DuesTab',
   Members: 'MembersTab',
+  Surveys: 'SurveysTab',
   Notifications: 'NotificationsTab',
   Profile: 'ProfileTab',
   Login: 'AuthTab',
@@ -262,6 +286,7 @@ function GuestNavigatorInner() {
   const { pendingNavigation, clearPendingNavigation } = useDrawer();
   const navigation = useNavigation<any>();
   const tabBarStyle = useTabBarStyle();
+  const { isModuleEnabled } = useModuleConfig();
 
   useEffect(() => {
     if (!pendingNavigation) return;
@@ -286,19 +311,30 @@ function GuestNavigatorInner() {
       })}
     >
       <GuestTab.Screen name="HomeTab" component={HomeStackNavigator} options={{ title: 'Ana Sayfa' }} />
-      <GuestTab.Screen name="AnnouncementsTab" component={AnnouncementsStackNavigator} options={{ title: 'Duyurular' }} />
-      <GuestTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
-      <GuestTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
-      <GuestTab.Screen
-        name="NotificationsTab"
-        options={{
-          title: 'Bildirimler',
-          headerShown: true,
-          ...sharedHeaderOptions,
-        }}
-      >
-        {() => <NotificationsScreen navigation={undefined} />}
-      </GuestTab.Screen>
+      {isModuleEnabled('announcements') && (
+        <GuestTab.Screen name="AnnouncementsTab" component={AnnouncementsStackNavigator} options={{ title: 'Duyurular' }} />
+      )}
+      {isModuleEnabled('events') && (
+        <GuestTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
+      )}
+      {isModuleEnabled('members') && (
+        <GuestTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
+      )}
+      {isModuleEnabled('surveys') && (
+        <GuestTab.Screen name="SurveysTab" component={SurveysStackNavigator} options={{ title: 'Anketler', headerShown: false }} />
+      )}
+      {isModuleEnabled('notifications') && (
+        <GuestTab.Screen
+          name="NotificationsTab"
+          options={{
+            title: 'Bildirimler',
+            headerShown: true,
+            ...sharedHeaderOptions,
+          }}
+        >
+          {() => <NotificationsScreen navigation={undefined} />}
+        </GuestTab.Screen>
+      )}
       <GuestTab.Screen name="AuthTab" component={AuthStackNavigator} options={{ title: 'Giriş Yap' }} />
     </GuestTab.Navigator>
   );
@@ -308,6 +344,7 @@ function MemberNavigatorInner() {
   const { pendingNavigation, clearPendingNavigation } = useDrawer();
   const navigation = useNavigation<any>();
   const tabBarStyle = useTabBarStyle();
+  const { isModuleEnabled } = useModuleConfig();
 
   useEffect(() => {
     if (!pendingNavigation) return;
@@ -332,21 +369,34 @@ function MemberNavigatorInner() {
       })}
     >
       <MemberTab.Screen name="HomeTab" component={HomeStackNavigator} options={{ title: 'Ana Sayfa' }} />
-      <MemberTab.Screen name="AnnouncementsTab" component={AnnouncementsStackNavigator} options={{ title: 'Duyurular' }} />
-      <MemberTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
-      <MemberTab.Screen
-        name="DuesTab"
-        options={{ title: 'Aidat', headerShown: true, ...sharedHeaderOptions }}
-      >
-        {() => <DuesScreen />}
-      </MemberTab.Screen>
-      <MemberTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
-      <MemberTab.Screen
-        name="NotificationsTab"
-        options={{ title: 'Bildirimler', headerShown: true, ...sharedHeaderOptions }}
-      >
-        {() => <NotificationsScreen navigation={undefined} />}
-      </MemberTab.Screen>
+      {isModuleEnabled('announcements') && (
+        <MemberTab.Screen name="AnnouncementsTab" component={AnnouncementsStackNavigator} options={{ title: 'Duyurular' }} />
+      )}
+      {isModuleEnabled('events') && (
+        <MemberTab.Screen name="EventsTab" component={EventsStackNavigator} options={{ title: 'Etkinlikler' }} />
+      )}
+      {isModuleEnabled('dues') && (
+        <MemberTab.Screen
+          name="DuesTab"
+          options={{ title: 'Aidat', headerShown: true, ...sharedHeaderOptions }}
+        >
+          {() => <DuesScreen />}
+        </MemberTab.Screen>
+      )}
+      {isModuleEnabled('members') && (
+        <MemberTab.Screen name="MembersTab" component={MembersStackNavigator} options={{ title: 'Üyeler' }} />
+      )}
+      {isModuleEnabled('surveys') && (
+        <MemberTab.Screen name="SurveysTab" component={SurveysStackNavigator} options={{ title: 'Anketler', headerShown: false }} />
+      )}
+      {isModuleEnabled('notifications') && (
+        <MemberTab.Screen
+          name="NotificationsTab"
+          options={{ title: 'Bildirimler', headerShown: true, ...sharedHeaderOptions }}
+        >
+          {() => <NotificationsScreen navigation={undefined} />}
+        </MemberTab.Screen>
+      )}
       <MemberTab.Screen
         name="ProfileTab"
         component={ProfileStackNavigator}

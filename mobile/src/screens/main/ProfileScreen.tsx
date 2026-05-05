@@ -53,6 +53,14 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [address, setAddress] = useState(member?.address || '');
   const [saving, setSaving] = useState(false);
 
+  // Password change state
+  const [showPwSection, setShowPwSection] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+
   const [dues, setDues] = useState<DuesWithDues[]>([]);
   const [duesLoading, setDuesLoading] = useState(true);
   const [debtSummary, setDebtSummary] = useState({
@@ -103,6 +111,46 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
     } else {
       await refreshMember();
       setEditing(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) {
+      Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Hata', 'Şifreler eşleşmiyor.');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const supabaseUrl = 'https://twktxzhsrobccqmheotf.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR3a3R4emhzcm9iY2NxbWhlb3RmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODI4MTgsImV4cCI6MjA4Njc1ODgxOH0.AIrHUSnZVumPIKAPJDS0Ou9_obUkMm2_a7-jX0EF99c';
+      const res = await fetch(`${supabaseUrl}/functions/v1/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+          'Apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ new_password: newPassword }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Şifre güncellenemedi.');
+      Alert.alert(
+        'Başarılı',
+        'Şifreniz güncellendi. Güvenliğiniz için çıkış yapılıyor.',
+        [{ text: 'Tamam', onPress: () => signOut() }]
+      );
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPwSection(false);
+    } catch (err: any) {
+      Alert.alert('Hata', err.message || 'Şifre güncellenirken hata oluştu.');
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -277,6 +325,68 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         )}
       </View>
 
+      {/* Password Change Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionTitleRow}>
+            <Ionicons name="lock-closed-outline" size={18} color="#b91c1c" />
+            <Text style={styles.sectionTitle}>Şifre Değiştir</Text>
+          </View>
+          <TouchableOpacity onPress={() => { setShowPwSection(v => !v); setNewPassword(''); setConfirmPassword(''); }}>
+            <Text style={styles.editLink}>{showPwSection ? 'İptal' : 'Değiştir'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showPwSection && (
+          <View style={styles.editForm}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Yeni Şifre</Text>
+              <View style={styles.pwRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1, borderWidth: 0, backgroundColor: 'transparent' }]}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="En az 6 karakter"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showNewPw}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity style={styles.pwToggle} onPress={() => setShowNewPw(v => !v)}>
+                  <Ionicons name={showNewPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Yeni Şifre Tekrar</Text>
+              <View style={styles.pwRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1, borderWidth: 0, backgroundColor: 'transparent' }]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="Şifreyi tekrar girin"
+                  placeholderTextColor="#9ca3af"
+                  secureTextEntry={!showConfirmPw}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity style={styles.pwToggle} onPress={() => setShowConfirmPw(v => !v)}>
+                  <Ionicons name={showConfirmPw ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.saveBtn, pwSaving && styles.btnDisabled]}
+              onPress={handleChangePassword}
+              disabled={pwSaving}
+            >
+              {pwSaving
+                ? <ActivityIndicator color="#fff" size="small" />
+                : <Text style={styles.saveBtnText}>Şifreyi Güncelle</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
       <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut}>
         <Ionicons name="log-out-outline" size={20} color="#dc2626" />
         <Text style={styles.logoutText}>Çıkış Yap</Text>
@@ -367,6 +477,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#111827', backgroundColor: '#f9fafb',
   },
   textArea: { height: 80, textAlignVertical: 'top' },
+  pwRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 10, backgroundColor: '#f9fafb', overflow: 'hidden' },
+  pwToggle: { paddingHorizontal: 12 },
   editBtns: { flexDirection: 'row', gap: 10 },
   cancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1.5, borderColor: '#e5e7eb', alignItems: 'center' },
   cancelBtnText: { fontSize: 14, fontWeight: '600', color: '#6b7280' },

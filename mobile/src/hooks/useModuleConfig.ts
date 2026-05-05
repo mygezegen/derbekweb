@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -13,34 +13,44 @@ export type ModuleConfig = {
   icon?: string;
 };
 
+let instanceCount = 0;
+
 export function useModuleConfig() {
   const { member } = useAuth();
   const [modules, setModules] = useState<ModuleConfig[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const loadModules = useCallback(async () => {
-    const { data } = await supabase
-      .from('module_config')
-      .select('*')
-      .order('sort_order', { ascending: true });
-    setModules(data || []);
-    setLoading(false);
-  }, []);
+  const channelNameRef = useRef<string>(`module-config-mobile-${++instanceCount}`);
 
   useEffect(() => {
-    loadModules();
+    let active = true;
+
+    const load = async () => {
+      const { data } = await supabase
+        .from('module_config')
+        .select('*')
+        .order('sort_order', { ascending: true });
+      if (active) {
+        setModules(data || []);
+        setLoading(false);
+      }
+    };
+
+    load();
 
     const channel = supabase
-      .channel('module-config-changes-mobile')
+      .channel(channelNameRef.current)
       .on(
         'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'module_config' },
-        () => { loadModules(); }
+        () => { load(); }
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [loadModules]);
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const isModuleEnabled = useCallback((moduleKey: string): boolean => {
     const mod = modules.find(m => m.module_key === moduleKey);
@@ -51,5 +61,13 @@ export function useModuleConfig() {
     return true;
   }, [modules, member]);
 
-  return { modules, loading, isModuleEnabled, reload: loadModules };
+  const reload = useCallback(async () => {
+    const { data } = await supabase
+      .from('module_config')
+      .select('*')
+      .order('sort_order', { ascending: true });
+    setModules(data || []);
+  }, []);
+
+  return { modules, loading, isModuleEnabled, reload };
 }

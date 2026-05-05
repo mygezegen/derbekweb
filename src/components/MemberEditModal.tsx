@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Save, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, Calendar, Car as IdCard, Users } from 'lucide-react';
+import { X, Save, User, Phone, Mail, MapPin, Briefcase, GraduationCap, Shield, Calendar, Car as IdCard, Users, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface MemberEditModalProps {
   member: Member;
@@ -41,9 +41,15 @@ type FormData = {
 };
 
 export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalProps) {
-  const { session } = useAuth();
+  const { session, member: currentMember } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSuccess, setPwSuccess] = useState('');
   const [form, setForm] = useState<FormData>({
     full_name: member.full_name || '',
     email: member.email || '',
@@ -76,6 +82,42 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
 
   const set = (field: keyof FormData, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleSetPassword = async () => {
+    setPwError('');
+    setPwSuccess('');
+    if (!newPassword || newPassword.length < 6) {
+      setPwError('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    if (!member.auth_id) {
+      setPwError('Bu üyenin aktif bir hesabı bulunmuyor.');
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+            Apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ new_password: newPassword, target_member_id: member.id }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Şifre güncellenemedi.');
+      setPwSuccess(result.message || 'Şifre başarıyla güncellendi.');
+      setNewPassword('');
+    } catch (err: unknown) {
+      setPwError(err instanceof Error ? err.message : 'Şifre güncellenirken hata oluştu.');
+    } finally {
+      setPwSaving(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -384,6 +426,45 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
                 </Field>
               </div>
             </Section>
+
+            {currentMember?.is_root && member.auth_id && (
+              <Section icon={<Lock size={16} />} title="Şifre Ata">
+                <div className="max-w-sm space-y-3">
+                  {pwSuccess && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded-lg text-sm">{pwSuccess}</div>
+                  )}
+                  {pwError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">{pwError}</div>
+                  )}
+                  <Field label="Yeni Şifre">
+                    <div className="relative">
+                      <input
+                        type={showPw ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                        className={inputCls + ' pr-10'}
+                        placeholder="En az 6 karakter"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPw(v => !v)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </Field>
+                  <button
+                    type="button"
+                    onClick={handleSetPassword}
+                    disabled={pwSaving || !newPassword}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {pwSaving ? 'Kaydediliyor...' : 'Şifreyi Kaydet'}
+                  </button>
+                </div>
+              </Section>
+            )}
 
             <Section icon={<Briefcase size={16} />} title="Tüzel Kişi Bilgileri">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { User, Mail, Phone, MapPin, Calendar } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Lock, Eye, EyeOff } from 'lucide-react';
 
 export function MemberInfo() {
   const [member, setMember] = useState<Member | null>(null);
@@ -11,6 +11,16 @@ export function MemberInfo() {
   const [address, setAddress] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  // Password change state
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     loadMemberInfo();
@@ -36,6 +46,46 @@ export function MemberInfo() {
       console.error('Error loading member info:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+    setPasswordSuccess('');
+    if (newPassword.length < 6) {
+      setPasswordError('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Şifreler eşleşmiyor.');
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ new_password: newPassword }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Şifre güncellenemedi.');
+      setPasswordSuccess('Şifreniz güncellendi. Güvenliğiniz için çıkış yapılıyor...');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => supabase.auth.signOut(), 2000);
+    } catch (err: any) {
+      setPasswordError(err.message || 'Şifre güncellenirken hata oluştu.');
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -250,6 +300,71 @@ export function MemberInfo() {
           </div>
         </div>
       )}
+      {/* Password Change Section */}
+      <div className="bg-white rounded-lg shadow p-8 mt-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Lock size={20} className="text-gray-600" />
+            <h3 className="text-lg font-bold text-gray-800">Şifre Değiştir</h3>
+          </div>
+          <button
+            onClick={() => { setShowPasswordSection(v => !v); setPasswordError(''); setPasswordSuccess(''); setNewPassword(''); setConfirmPassword(''); }}
+            className="text-sm text-red-600 font-semibold hover:text-red-700"
+          >
+            {showPasswordSection ? 'İptal' : 'Şifreyi Değiştir'}
+          </button>
+        </div>
+
+        {showPasswordSection && (
+          <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
+            {passwordSuccess && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">{passwordSuccess}</div>
+            )}
+            {passwordError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">{passwordError}</div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre</label>
+              <div className="relative">
+                <input
+                  type={showNewPw ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="En az 6 karakter"
+                  required
+                />
+                <button type="button" onClick={() => setShowNewPw(v => !v)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                  {showNewPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Yeni Şifre Tekrar</label>
+              <div className="relative">
+                <input
+                  type={showConfirmPw ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Şifreyi tekrar girin"
+                  required
+                />
+                <button type="button" onClick={() => setShowConfirmPw(v => !v)} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                  {showConfirmPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={passwordSaving}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-md disabled:opacity-60 font-semibold"
+            >
+              {passwordSaving ? 'Kaydediliyor...' : 'Şifreyi Güncelle'}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

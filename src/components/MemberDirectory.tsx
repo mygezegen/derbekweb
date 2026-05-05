@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { Member } from '../types';
-import { Search, Eye, X, Shield, User, Crown, Pencil, Trash2, Wallet, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
+import { Search, Eye, X, Shield, User, Crown, Pencil, Trash2, Wallet, CheckCircle, Clock, AlertCircle, XCircle, Lock, EyeOff } from 'lucide-react';
 import { MemberEditModal } from './MemberEditModal';
 
 interface MemberDuesItem {
@@ -38,6 +38,14 @@ export function MemberDirectory() {
   const [duesLoading, setDuesLoading] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
+
+  // Admin password assignment state
+  const [adminPwMemberId, setAdminPwMemberId] = useState<string | null>(null);
+  const [adminNewPw, setAdminNewPw] = useState('');
+  const [adminShowPw, setAdminShowPw] = useState(false);
+  const [adminPwSaving, setAdminPwSaving] = useState(false);
+  const [adminPwError, setAdminPwError] = useState('');
+  const [adminPwSuccess, setAdminPwSuccess] = useState('');
 
   useEffect(() => {
     loadMembers();
@@ -143,6 +151,41 @@ export function MemberDirectory() {
     } catch (err) {
       console.error('Error deleting member:', err);
       alert('Üye silinirken bir hata oluştu.');
+    }
+  };
+
+  const handleAdminPasswordSet = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminPwError('');
+    setAdminPwSuccess('');
+    if (!adminNewPw || adminNewPw.length < 6) {
+      setAdminPwError('Şifre en az 6 karakter olmalıdır.');
+      return;
+    }
+    setAdminPwSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/change-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`,
+            'Apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ new_password: adminNewPw, target_member_id: adminPwMemberId }),
+        }
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Şifre güncellenemedi.');
+      setAdminPwSuccess(result.message || 'Şifre başarıyla güncellendi.');
+      setAdminNewPw('');
+      setAdminPwMemberId(null);
+    } catch (err: any) {
+      setAdminPwError(err.message || 'Şifre güncellenirken hata oluştu.');
+    } finally {
+      setAdminPwSaving(false);
     }
   };
 
@@ -479,6 +522,68 @@ export function MemberDirectory() {
                   </>
                 )}
               </div>
+
+              {/* Root-only: assign password to this member */}
+              {currentUser?.is_root && selectedMember.id !== currentUser?.id && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Lock size={18} className="text-gray-600" />
+                      <h4 className="font-semibold text-gray-800 text-base">Şifre Ata</h4>
+                    </div>
+                    {adminPwMemberId !== selectedMember.id && (
+                      <button
+                        onClick={() => { setAdminPwMemberId(selectedMember.id); setAdminPwError(''); setAdminPwSuccess(''); setAdminNewPw(''); }}
+                        className="text-sm text-red-600 font-semibold hover:text-red-700"
+                      >
+                        Şifre Belirle
+                      </button>
+                    )}
+                  </div>
+
+                  {adminPwSuccess && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-3">{adminPwSuccess}</div>
+                  )}
+
+                  {adminPwMemberId === selectedMember.id && (
+                    <form onSubmit={handleAdminPasswordSet} className="flex items-end gap-3 max-w-sm">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Yeni Şifre</label>
+                        <div className="relative">
+                          <input
+                            type={adminShowPw ? 'text' : 'password'}
+                            value={adminNewPw}
+                            onChange={e => setAdminNewPw(e.target.value)}
+                            className="w-full px-3 py-2 pr-9 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                            placeholder="En az 6 karakter"
+                            required
+                          />
+                          <button type="button" onClick={() => setAdminShowPw(v => !v)} className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600">
+                            {adminShowPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                          </button>
+                        </div>
+                        {adminPwError && <p className="text-red-600 text-xs mt-1">{adminPwError}</p>}
+                      </div>
+                      <div className="flex gap-2 pb-0.5">
+                        <button
+                          type="button"
+                          onClick={() => { setAdminPwMemberId(null); setAdminNewPw(''); setAdminPwError(''); }}
+                          className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                        >
+                          İptal
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={adminPwSaving}
+                          className="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60 font-semibold"
+                        >
+                          {adminPwSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
