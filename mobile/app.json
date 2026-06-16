@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Dernek",
+    "name": "Çaybaşı Köyü",
     "slug": "dernek-mobile",
     "scheme": "dernek",
-    "version": "4.0.0",
+    "version": "5.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

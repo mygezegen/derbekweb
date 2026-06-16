@@ -9,6 +9,7 @@ export function MemberInfo() {
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
@@ -41,6 +42,7 @@ export function MemberInfo() {
         setMember(data);
         setPhone(data.phone || '');
         setAddress(data.address || '');
+        setBirthDate(data.birth_date || '');
       }
     } catch (error) {
       console.error('Error loading member info:', error);
@@ -102,6 +104,7 @@ export function MemberInfo() {
         .update({
           phone,
           address,
+          birth_date: birthDate || null,
         })
         .eq('id', member.id);
 
@@ -206,13 +209,13 @@ export function MemberInfo() {
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                 <Calendar size={18} />
-                Katılım Tarihi
+                Doğum Tarihi
               </label>
               <input
-                type="text"
-                value={new Date(member.joined_at).toLocaleDateString('tr-TR')}
-                disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                type="date"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -244,6 +247,7 @@ export function MemberInfo() {
                 setEditing(false);
                 setPhone(member.phone || '');
                 setAddress(member.address || '');
+                setBirthDate(member.birth_date || '');
                 setError('');
                 setSuccess('');
               }}
@@ -283,10 +287,12 @@ export function MemberInfo() {
             <div className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center gap-2 text-gray-600 mb-2">
                 <Calendar size={18} />
-                <span className="text-sm font-medium">Katılım Tarihi</span>
+                <span className="text-sm font-medium">Doğum Tarihi</span>
               </div>
               <p className="text-lg font-semibold text-gray-800">
-                {new Date(member.joined_at).toLocaleDateString('tr-TR')}
+                {member.birth_date
+                  ? new Date(member.birth_date).toLocaleDateString('tr-TR')
+                  : 'Belirtilmemiş'}
               </p>
             </div>
           </div>

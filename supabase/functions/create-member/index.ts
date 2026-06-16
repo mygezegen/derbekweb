@@ -81,6 +81,7 @@ Deno.serve(async (req: Request) => {
       passive_objection_date,
       mother_name,
       father_name,
+      birth_date,
       is_legal_entity,
       legal_entity_number,
       representative_name,
@@ -136,6 +137,7 @@ Deno.serve(async (req: Request) => {
     if (passive_objection_date) memberData.passive_objection_date = passive_objection_date;
     if (mother_name) memberData.mother_name = mother_name;
     if (father_name) memberData.father_name = father_name;
+    if (birth_date) memberData.birth_date = birth_date;
     if (is_legal_entity !== undefined) memberData.is_legal_entity = is_legal_entity;
     if (legal_entity_number) memberData.legal_entity_number = legal_entity_number;
     if (representative_name) memberData.representative_name = representative_name;

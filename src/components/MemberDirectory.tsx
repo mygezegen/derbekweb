@@ -357,7 +357,6 @@ export function MemberDirectory() {
                     <button
                       onClick={() => {
                         setEditingMember(selectedMember);
-                        setSelectedMember(null);
                       }}
                       className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
                     >
@@ -429,6 +428,10 @@ export function MemberDirectory() {
                 <InfoField label="Pasif İtiraz Tarihi" value={selectedMember.passive_objection_date} />
                 <InfoField label="Baba Adı" value={selectedMember.father_name} />
                 <InfoField label="Ana Adı" value={selectedMember.mother_name} />
+                <InfoField
+                  label="Doğum Tarihi"
+                  value={selectedMember.birth_date ? new Date(selectedMember.birth_date).toLocaleDateString('tr-TR') : undefined}
+                />
                 <InfoField label="Kayıt Tarihi (Sistem)" value={new Date(selectedMember.joined_at).toLocaleDateString('tr-TR')} />
               </div>
 
@@ -592,10 +595,26 @@ export function MemberDirectory() {
       {editingMember && (
         <MemberEditModal
           member={editingMember}
-          onClose={() => setEditingMember(null)}
-          onSaved={() => {
+          onClose={() => {
+            // İptal edilince detay paneline geri dön
+            const prev = editingMember;
             setEditingMember(null);
-            loadMembers();
+            if (prev) setSelectedMember(prev);
+          }}
+          onSaved={async () => {
+            const memberId = editingMember.id;
+            setEditingMember(null);
+            await loadMembers();
+            // Kaydedilen üyenin güncel kaydını DB'den çek ve detay panelini aç
+            const { data: refreshed } = await supabase
+              .from('members')
+              .select('*')
+              .eq('id', memberId)
+              .maybeSingle();
+            if (refreshed) {
+              setSelectedMember(refreshed);
+              loadMemberDues(memberId);
+            }
           }}
         />
       )}

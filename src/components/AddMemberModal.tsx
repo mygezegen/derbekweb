@@ -32,6 +32,7 @@ type FormData = {
   passive_objection_date: string;
   mother_name: string;
   father_name: string;
+  birth_date: string;
   is_legal_entity: boolean;
   legal_entity_number: string;
   representative_name: string;
@@ -63,6 +64,7 @@ const empty: FormData = {
   passive_objection_date: '',
   mother_name: '',
   father_name: '',
+  birth_date: '',
   is_legal_entity: false,
   legal_entity_number: '',
   representative_name: '',
@@ -124,7 +126,7 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
         'gender', 'province', 'district', 'profession', 'education_level', 'title',
         'registration_date', 'board_decision_date', 'status_change_date',
         'passive_status_date', 'passive_status_reason', 'passive_objection_date',
-        'mother_name', 'father_name', 'legal_entity_number',
+        'mother_name', 'father_name', 'birth_date', 'legal_entity_number',
         'representative_name', 'representative_tc_no', 'website',
       ];
 
@@ -254,6 +256,9 @@ export function AddMemberModal({ onClose, onSaved }: AddMemberModalProps) {
                 </Field>
                 <Field label="Ana Adı">
                   <input type="text" value={form.mother_name} onChange={(e) => set('mother_name', e.target.value)} className={inputCls} />
+                </Field>
+                <Field label="Doğum Tarihi">
+                  <input type="date" value={form.birth_date} onChange={(e) => set('birth_date', e.target.value)} className={inputCls} />
                 </Field>
               </div>
             </Section>

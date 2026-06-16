@@ -33,6 +33,7 @@ type FormData = {
   passive_objection_date: string;
   mother_name: string;
   father_name: string;
+  birth_date: string;
   is_legal_entity: boolean;
   legal_entity_number: string;
   representative_name: string;
@@ -73,6 +74,7 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
     passive_objection_date: member.passive_objection_date || '',
     mother_name: member.mother_name || '',
     father_name: member.father_name || '',
+    birth_date: member.birth_date || '',
     is_legal_entity: member.is_legal_entity || false,
     legal_entity_number: member.legal_entity_number || '',
     representative_name: member.representative_name || '',
@@ -148,6 +150,7 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
         passive_objection_date: form.passive_objection_date || null,
         mother_name: form.mother_name.trim() || null,
         father_name: form.father_name.trim() || null,
+        birth_date: form.birth_date || null,
         is_legal_entity: form.is_legal_entity,
         legal_entity_number: form.legal_entity_number.trim() || null,
         representative_name: form.representative_name.trim() || null,
@@ -262,6 +265,14 @@ export function MemberEditModal({ member, onClose, onSaved }: MemberEditModalPro
                     type="text"
                     value={form.mother_name}
                     onChange={(e) => set('mother_name', e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+                <Field label="Doğum Tarihi">
+                  <input
+                    type="date"
+                    value={form.birth_date}
+                    onChange={(e) => set('birth_date', e.target.value)}
                     className={inputCls}
                   />
                 </Field>
