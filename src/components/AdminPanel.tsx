@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Member } from '../types';
-import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package, Clock, UserCheck, XCircle } from 'lucide-react';
+import { Shield, Trash2, UserPlus, Download, Users, DollarSign, Share2, CheckCircle, Tag, Package, Clock, UserCheck, XCircle, Pencil } from 'lucide-react';
 import { MemberDuesPayment } from './MemberDuesPayment';
 import { AddMemberModal } from './AddMemberModal';
+import { MemberEditModal } from './MemberEditModal';
 import { SocialMediaConfiguration } from './SocialMediaConfiguration';
 import VerificationManagement from './VerificationManagement';
 import { CategoryManagement } from './CategoryManagement';
@@ -22,6 +23,7 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddMember, setShowAddMember] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [pendingDeletionCount, setPendingDeletionCount] = useState(0);
 
   useEffect(() => {
@@ -401,6 +403,14 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
                 </div>
 
                 <div className="flex gap-2 flex-wrap">
+                  <button
+                    onClick={() => setEditingMember(member)}
+                    className="bg-gray-100 text-gray-700 px-2 sm:px-3 py-1.5 sm:py-2 rounded text-xs sm:text-sm hover:bg-gray-200 transition-colors whitespace-nowrap flex items-center gap-1"
+                    title="Düzenle"
+                  >
+                    <Pencil size={14} />
+                    <span className="hidden sm:inline">Düzenle</span>
+                  </button>
                   {member.is_admin ? (
                     <button
                       onClick={() => handleRemoveAdmin(member.id)}
@@ -428,6 +438,18 @@ export function AdminPanel({ onRefresh }: AdminPanelProps) {
           </div>
         </div>
       </div>
+      )}
+
+      {editingMember && (
+        <MemberEditModal
+          member={editingMember}
+          onClose={() => setEditingMember(null)}
+          onSaved={() => {
+            setEditingMember(null);
+            loadMembers();
+            onRefresh();
+          }}
+        />
       )}
 
       {activeTab === 'payments' && (
