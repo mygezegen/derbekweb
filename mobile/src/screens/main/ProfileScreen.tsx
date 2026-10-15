@@ -51,6 +51,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState(member?.phone || '');
   const [address, setAddress] = useState(member?.address || '');
+  const [birthDate, setBirthDate] = useState(member?.birth_date || '');
   const [saving, setSaving] = useState(false);
 
   // Password change state
@@ -103,7 +104,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
     setSaving(true);
     const { error } = await supabase
       .from('members')
-      .update({ phone, address })
+      .update({ phone, address, birth_date: birthDate || null })
       .eq('id', member.id);
     setSaving(false);
     if (error) {
@@ -195,6 +196,11 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         {member.profession && <InfoRow icon="briefcase" label="Meslek" value={member.profession} />}
         {member.province && <InfoRow icon="location" label="İl" value={`${member.province}${member.district ? ` / ${member.district}` : ''}`} />}
         <InfoRow
+          icon="gift"
+          label="Doğum Tarihi"
+          value={member.birth_date ? new Date(member.birth_date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Belirtilmemiş'}
+        />
+        <InfoRow
           icon="calendar"
           label="Üyelik Tarihi"
           value={member.joined_at ? new Date(member.joined_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Belirtilmemiş'}
@@ -216,7 +222,7 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>İletişim Bilgileri</Text>
           {!editing && (
-            <TouchableOpacity onPress={() => { setPhone(member.phone || ''); setAddress(member.address || ''); setEditing(true); }}>
+            <TouchableOpacity onPress={() => { setPhone(member.phone || ''); setAddress(member.address || ''); setBirthDate(member.birth_date || ''); setEditing(true); }}>
               <Text style={styles.editLink}>Düzenle</Text>
             </TouchableOpacity>
           )}
@@ -245,6 +251,18 @@ export default function ProfileScreen({ navigation }: { navigation: any }) {
                 multiline
                 numberOfLines={3}
                 placeholderTextColor="#9ca3af"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Doğum Tarihi (YYYY-AA-GG)</Text>
+              <TextInput
+                style={styles.input}
+                value={birthDate}
+                onChangeText={setBirthDate}
+                placeholder="Örn: 1990-05-15"
+                keyboardType="numeric"
+                placeholderTextColor="#9ca3af"
+                maxLength={10}
               />
             </View>
             <View style={styles.editBtns}>

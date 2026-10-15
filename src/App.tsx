@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
@@ -11,6 +11,23 @@ import { MemberQueryPage } from './pages/MemberQueryPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
+
+function PasswordRecoveryRedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    const accessToken = hashParams.get('access_token');
+
+    if (accessToken && type === 'recovery' && location.pathname !== '/reset-password') {
+      navigate('/reset-password', { replace: true });
+    }
+  }, [location, navigate]);
+
+  return null;
+}
 
 // Debug: Environment variables
 console.log('🔍 Supabase Config Check:', {
@@ -91,6 +108,7 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
       <Router>
+        <PasswordRecoveryRedirect />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login onLoginSuccess={() => {}} />} />

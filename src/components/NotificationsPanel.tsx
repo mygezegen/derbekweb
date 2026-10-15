@@ -181,10 +181,17 @@ export function NotificationsPanel() {
       const recipientMembers = members.filter(m => recipientIds.includes(m.id));
 
       if (notificationType === 'sms') {
-        const smsMembers = recipientMembers.filter(m => m.phone && m.phone.trim().length > 0);
+        const isValidPhone = (p?: string | null) => {
+          if (!p) return false;
+          const cleaned = p.replace(/\D/g, '').replace(/^90/, '').replace(/^0/, '');
+          return /^5[0-9]{9}$/.test(cleaned);
+        };
+
+        const smsMembers = recipientMembers.filter(m => isValidPhone(m.phone));
+        const skippedInvalid = recipientMembers.length - smsMembers.length;
 
         if (smsMembers.length === 0) {
-          throw new Error('Telefon numarası bulunan alıcı yok');
+          throw new Error('Geçerli telefon numarası bulunan alıcı yok');
         }
 
         if (hasParams) {
@@ -214,7 +221,7 @@ export function NotificationsPanel() {
             .update({ status: 'sent', sent_at: new Date().toISOString() })
             .eq('notification_id', notification.id);
 
-          setSuccess(`SMS başarıyla gönderildi. ${sentCount} alıcıya ulaştı.${failCount > 0 ? ` ${failCount} gönderilemedi.` : ''}`);
+          setSuccess(`SMS başarıyla gönderildi. ${sentCount} alıcıya ulaştı.${failCount > 0 ? ` ${failCount} gönderilemedi.` : ''}${skippedInvalid > 0 ? ` ${skippedInvalid} geçersiz numara atlandı.` : ''}`);
         } else {
           const phoneNumbers = smsMembers.map(m => m.phone!);
           const smsResult = await sendSMS({
@@ -236,7 +243,7 @@ export function NotificationsPanel() {
             .update({ status: 'sent', sent_at: new Date().toISOString() })
             .eq('notification_id', notification.id);
 
-          setSuccess(`SMS başarıyla gönderildi. ${phoneNumbers.length} alıcıya ulaştı. Sipariş ID: ${smsResult.orderId}`);
+          setSuccess(`SMS başarıyla gönderildi. ${phoneNumbers.length} alıcıya ulaştı.${skippedInvalid > 0 ? ` ${skippedInvalid} geçersiz numara atlandı.` : ''} Sipariş ID: ${smsResult.orderId}`);
         }
       } else {
         const { data: { session } } = await supabase.auth.getSession();

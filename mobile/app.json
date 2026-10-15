@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Çaybaşı Köyü",
+    "name": "Dernek",
     "slug": "dernek-mobile",
     "scheme": "dernek",
-    "version": "5.0.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -12,15 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#b91c1c"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.dernek.mobile",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dernek.mobile"
     },
     "android": {
       "adaptiveIcon": {

@@ -22,6 +22,7 @@ export interface Member {
   is_active?: boolean;
   mother_name?: string;
   father_name?: string;
+  birth_date?: string;
 }
 
 export interface Announcement {

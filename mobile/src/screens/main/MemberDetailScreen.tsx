@@ -181,6 +181,7 @@ export default function MemberDetailScreen({ route, navigation }: Props) {
           <InfoRow icon="home-outline" label="Adres" value={member.address} />
           <InfoRow icon="people-outline" label="Anne Adı" value={member.mother_name} />
           <InfoRow icon="people-outline" label="Baba Adı" value={member.father_name} />
+          <InfoRow icon="gift-outline" label="Doğum Tarihi" value={member.birth_date ? formatDate(member.birth_date) : undefined} />
           <InfoRow icon="ribbon-outline" label="Üye Tipi" value={member.member_type} />
           <InfoRow icon="star-outline" label="Unvan" value={member.title} />
         </View>

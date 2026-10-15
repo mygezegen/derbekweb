@@ -80,19 +80,57 @@ Deno.serve(async (req: Request) => {
 
     const { data: targetMember } = await supabaseAdmin
       .from("members")
-      .select("auth_id, full_name")
+      .select("auth_id, full_name, email")
       .eq("id", target_member_id)
       .maybeSingle();
 
-    if (!targetMember || !targetMember.auth_id) {
+    if (!targetMember) {
       return new Response(
-        JSON.stringify({ error: "Üye bulunamadı veya hesabı aktif değil" }),
+        JSON.stringify({ error: "Üye bulunamadı" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    let targetAuthId = targetMember.auth_id;
+
+    // Üyenin auth hesabı yoksa, yeni hesap oluştur
+    if (!targetAuthId) {
+      if (!targetMember.email) {
+        return new Response(
+          JSON.stringify({ error: "Bu üyenin e-posta adresi bulunmuyor, hesap oluşturulamıyor" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tempPassword = `Temp${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}!`;
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: targetMember.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: { full_name: targetMember.full_name },
+      });
+
+      if (authError || !authData.user) {
+        return new Response(
+          JSON.stringify({ error: `Hesap oluşturulamadı: ${authError?.message || "Bilinmeyen hata"}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      targetAuthId = authData.user.id;
+
+      const { error: updateMemberError } = await supabaseAdmin
+        .from("members")
+        .update({ auth_id: targetAuthId })
+        .eq("id", target_member_id);
+
+      if (updateMemberError) {
+        console.error("Member auth_id güncelleme hatası:", updateMemberError);
+      }
+    }
+
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-      targetMember.auth_id,
+      targetAuthId,
       { password: new_password }
     );
     if (updateError) {

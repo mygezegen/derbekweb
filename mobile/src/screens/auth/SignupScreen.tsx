@@ -27,6 +27,7 @@ interface FormData {
   tc_identity_no: string;
   mother_name: string;
   father_name: string;
+  birth_date: string;
   address: string;
   profession: string;
   phone: string;
@@ -41,7 +42,7 @@ export default function SignupScreen({ navigation }: Props) {
 
   const [form, setForm] = useState<FormData>({
     email: '', password: '', full_name: '', tc_identity_no: '',
-    mother_name: '', father_name: '', address: '', profession: '', phone: '',
+    mother_name: '', father_name: '', birth_date: '', address: '', profession: '', phone: '',
   });
 
   useEffect(() => {
@@ -142,6 +143,7 @@ export default function SignupScreen({ navigation }: Props) {
       const { error: updateError } = await supabase.from('members').update({
         full_name, tc_identity_no, mother_name, father_name,
         address, profession, phone,
+        birth_date: form.birth_date || null,
         pending_approval: true, is_active: false,
       }).eq('auth_id', session.user.id);
 
@@ -305,6 +307,21 @@ export default function SignupScreen({ navigation }: Props) {
                   onChangeText={t => setForm(f => ({ ...f, father_name: t }))}
                   placeholder="Baba Adı"
                   placeholderTextColor="#9ca3af"
+                />
+              </InputField>
+
+              <InputField label="Doğum Tarihi" icon="calendar-outline">
+                <TextInput
+                  style={s.input}
+                  value={form.birth_date}
+                  onChangeText={t => {
+                    const clean = t.replace(/[^0-9-]/g, '');
+                    setForm(f => ({ ...f, birth_date: clean }));
+                  }}
+                  placeholder="YYYY-AA-GG (örn: 1990-05-15)"
+                  placeholderTextColor="#9ca3af"
+                  keyboardType="numeric"
+                  maxLength={10}
                 />
               </InputField>
 

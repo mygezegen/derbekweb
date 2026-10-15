@@ -34,15 +34,18 @@ export function ResetPassword() {
       return;
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    let resolved = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        resolved = true;
         setSessionReady(true);
         setVerifying(false);
       }
     });
 
     const timer = setTimeout(() => {
-      if (!sessionReady) {
+      if (!resolved) {
         supabase.auth.getSession().then(({ data: { session } }) => {
           if (session) {
             setSessionReady(true);

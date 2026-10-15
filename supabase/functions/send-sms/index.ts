@@ -133,7 +133,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const cleanedRecipients = recipients.map((num) => cleanPhoneNumber(num));
+    const allCleaned = recipients.map((num) => cleanPhoneNumber(num));
+    const cleanedRecipients = allCleaned.filter(isValidPhoneNumber);
+    const skippedCount = allCleaned.length - cleanedRecipients.length;
+
+    if (skippedCount > 0) {
+      console.log(`Geçersiz numara atlandı: ${skippedCount} / ${allCleaned.length}`);
+    }
+
+    if (cleanedRecipients.length === 0) {
+      return Response.json(
+        { success: false, error: "Geçerli telefon numarası bulunamadı. Tüm numaralar geçersiz formatda." },
+        { headers: corsHeaders, status: 400 }
+      );
+    }
 
     const requestBody = {
       request: {
@@ -209,7 +222,7 @@ Deno.serve(async (req: Request) => {
     if (isSuccess) {
       console.log("SMS sent successfully");
       return Response.json(
-        { success: true, orderId },
+        { success: true, orderId, sentCount: cleanedRecipients.length, skippedCount },
         { headers: corsHeaders }
       );
     } else {
@@ -236,6 +249,11 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
+
+function isValidPhoneNumber(phone: string): boolean {
+  // Valid Turkish mobile: 10 digits starting with 5
+  return /^5[0-9]{9}$/.test(phone);
+}
 
 function cleanPhoneNumber(phone: string): string {
   let cleaned = phone.replace(/\D/g, "");

@@ -1,0 +1,2 @@
+[functions.change-password]
+verify_jwt = true
